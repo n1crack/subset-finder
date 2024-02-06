@@ -1,4 +1,4 @@
-## SubsetFinder PHP Package
+# SubsetFinder PHP Package
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/ozdemir/subset-finder)](https://packagist.org/packages/ozdemir/subset-finder)
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/n1crack/subset-finder/run-tests.yml)](https://github.com/n1crack/subset-finder/actions)
@@ -6,14 +6,14 @@
 
 The SubsetFinder package allows you to find subsets within a given collection based on specified criteria. It's particularly useful for scenarios where you need to extract subsets of items from a larger collection, such as in discount calculation or inventory management systems.
 
-### Installation
+## Installation
 You can install the SubsetFinder package via Composer:
 
 ```zsh
 composer require ozdemir/subset-finder
 ```
 
-### Usage
+## Usage
 Here's a basic example of how to use the SubsetFinder package:
 
 ```php
@@ -69,9 +69,9 @@ $subSetQuantity = $subset->getSetQuantity()
 
 ```
 
-### Configuration
+## Configuration
 
-#### Prioritize items to be included in the subset
+### Prioritize items to be included in the subset
 ```php
 // Seek subsets that meet the criteria
 $subsetCriteria = collect([
@@ -86,7 +86,7 @@ $subsetCriteria = collect([
 $subsetter->sortBy('price');
 ```
 
-#### Define the field names for the quantity, items and id fields. 
+### Define the field names for the quantity, items and id fields. 
 
 ```php
 // We can use the fields with the defined names.
@@ -106,15 +106,15 @@ $setCollection = collect([
 ]);
 ```
 
-### Testing
+## Testing
 You can run the tests with:
 
 ```zsh
 composer test
 ```
 
-### Contributing
+## Contributing
 Contributions are welcome! If you find any issues or have suggestions for improvements, please open an issue or create a pull request on GitHub.
 
-### License
+## License
 This package is open-sourced software licensed under the MIT license.
