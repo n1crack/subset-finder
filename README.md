@@ -18,6 +18,8 @@ Here's a basic example of how to use the SubsetFinder package:
 
 ```php
 use Ozdemir\SubsetFinder\SubsetFinder;
+use Ozdemir\SubsetFinder\SubsetCollection;
+use Ozdemir\SubsetFinder\Subset;
 
 // Define your collection and subset criteria
 
@@ -28,15 +30,15 @@ $collection = collect([
     // Add more items...
 ]);
 
-$subsetCriteria = collect([
-    ["quantity" => 5, "items" => [1, 2]],
-    ["quantity" => 2, "items" => [3]],
+$subsetCollection = new SubsetCollection([
+    Subset::of([1, 2])->take(5),
+    Subset::of([3])->take(2),
     // Add more criteria...
 ]);
 
 
 // Instantiate SubsetFinder
-$subsetter = new SubsetFinder($collection, $subsetCriteria);
+$subsetter = new SubsetFinder($collection, $subsetCollection);
 
 // Optionally, configure sorting
 $subsetter->sortBy('price');
@@ -74,10 +76,10 @@ $subSetQuantity = $subset->getSetQuantity()
 ### Prioritize items to be included in the subset
 ```php
 // Seek subsets that meet the criteria
-$subsetCriteria = collect([
-    ["quantity" => 5, "items" => [1, 2, 3]], // Find a subset with a total quantity of 5 from items 1, 2, and 3 in the collection
-    ["quantity" => 2, "items" => [4, 5]], // Find a subset with a total quantity of 2 from items 4 and 5 in the collection
-    ["quantity" => 5, "items" => [12]], // Find a subset with a total quantity of 5 from item 12 in the collection
+$subsetCollection = new SubsetCollection([
+    Subset::of([1, 2, 3])->take(5), // Find a subset with a total quantity of 5 from items 1, 2, and 3 in the collection
+    Subset::of([4, 5])->take(2), // Find a subset with a total quantity of 2 from items 4 and 5 in the collection
+    Subset::of([12])->take(5), // Find a subset with a total quantity of 5 from item 12 in the collection
     // etc...
 ]);
 
@@ -91,18 +93,19 @@ $subsetter->sortBy('price');
 ```php
 // We can use the fields with the defined names.
 $subsetter->defineProps(
-    quantity: 'amount', 
-    items: 'products', 
     id: 'name'
+    quantity: 'amount'
 );
+
 $collection = collect([
     ["name" => 1, "amount" => 11, "price" => 15],
     // Add more items...
 ]);
 
+// Find a subset with a total amount (quantity) of 5 from items named 1 and 2 (id) in the collection
 $setCollection = collect([
-    ["amount" => 5, "products" => [1, 2]],
-    // Add more sets...
+     Subset::of([1, 2])->take(5) 
+    // define more...
 ]);
 ```
 

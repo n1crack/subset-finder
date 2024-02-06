@@ -1,9 +1,10 @@
 <?php
 
+use Ozdemir\SubsetFinder\Subset;
+use Ozdemir\SubsetFinder\SubsetCollection;
 use Ozdemir\SubsetFinder\SubsetFinder;
 
-it('can find subsets in a collection', function() {
-
+it('can find subsets in a collection', function () {
     $collection = collect([
         ["id" => 1, "quantity" => 11, "price" => 15],
         ["id" => 2, "quantity" => 6, "price" => 5],
@@ -12,9 +13,9 @@ it('can find subsets in a collection', function() {
         ["id" => 12, "quantity" => 5, "price" => 6],
     ]);
 
-    $setCollection = collect([
-        ["quantity" => 5, "items" => [1, 2]],
-        ["quantity" => 2, "items" => [3]],
+    $setCollection = new SubsetCollection([
+        Subset::of([1, 2])->take(5),
+        Subset::of([3])->take(2),
     ]);
 
     $subsetter = new SubsetFinder($collection, $setCollection);
@@ -39,7 +40,7 @@ it('can find subsets in a collection', function() {
         ]);
 });
 
-it('can find subsets in a collection with different field names', function() {
+it('can find subsets in a collection with different field names', function () {
     $collection = collect([
         ["name" => 1, "amount" => 11, "price" => 15],
         ["name" => 2, "amount" => 6, "price" => 5],
@@ -48,13 +49,13 @@ it('can find subsets in a collection with different field names', function() {
         ["name" => 12, "amount" => 5, "price" => 6],
     ]);
 
-    $setCollection = collect([
-        ["amount" => 5, "products" => [1, 2]],
-        ["amount" => 2, "products" => [3]],
+    $setCollection = new SubsetCollection([
+        Subset::of([1, 2])->take(5),
+        Subset::of([3])->take(2),
     ]);
 
     $subsetter = new SubsetFinder($collection, $setCollection);
-    $subsetter->defineProps(quantity: 'amount', items: 'products', id: 'name');
+    $subsetter->defineProps(id: 'name', quantity: 'amount');
     $subsetter->sortBy('price');
 
     expect($subsetter->getSetQuantity())->toBe(3)
@@ -65,7 +66,7 @@ it('can find subsets in a collection with different field names', function() {
         ]);
 });
 
-it('returns blank if it doesnt find anything', function() {
+it('returns blank if it doesnt find anything', function () {
     $collection = collect([
         ["id" => 1, "quantity" => 11, "price" => 15],
         ["id" => 2, "quantity" => 6, "price" => 5],
@@ -74,9 +75,9 @@ it('returns blank if it doesnt find anything', function() {
         ["id" => 12, "quantity" => 5, "price" => 6],
     ]);
 
-    $setCollection = collect([
-        ["quantity" => 22, "items" => [1, 2]],
-        ["quantity" => 2, "items" => [3]],
+    $setCollection = new SubsetCollection([
+        Subset::of([1, 2])->take(22),
+        Subset::of([3])->take(2),
     ]);
 
     $subsetter = new SubsetFinder($collection, $setCollection);
@@ -89,7 +90,7 @@ it('returns blank if it doesnt find anything', function() {
         ->and($subsetter->getRemaining()->toArray())->toBe($collection->toArray());
 });
 
-it('can cover all items in the collection ', function() {
+it('can cover all items in the collection ', function () {
     $collection = collect([
         ["id" => 1, "quantity" => 11, "price" => 15],
         ["id" => 2, "quantity" => 6, "price" => 5],
@@ -98,12 +99,12 @@ it('can cover all items in the collection ', function() {
         ["id" => 12, "quantity" => 5, "price" => 6],
     ]);
 
-    $setCollection = collect([
-        ["quantity" => 11, "items" => [1]],
-        ["quantity" => 6, "items" => [2]],
-        ["quantity" => 18, "items" => [3]],
-        ["quantity" => 4, "items" => [5]],
-        ["quantity" => 5, "items" => [12]],
+    $setCollection = new SubsetCollection([
+        Subset::of([1])->take(11),
+        Subset::of([2])->take(6),
+        Subset::of([3])->take(18),
+        Subset::of([5])->take(4),
+        Subset::of([12])->take(5),
     ]);
 
     $subsetter = new SubsetFinder($collection, $setCollection);
@@ -116,15 +117,15 @@ it('can cover all items in the collection ', function() {
         ->and($subsetter->getRemaining()->toArray())->toBe([]);
 });
 
-it('can have multiple items from the collection to look up', function() {
+it('can have multiple items from the collection to look up', function () {
     $collection = collect([
         ["id" => 1, "quantity" => 11, "price" => 15],
         ["id" => 2, "quantity" => 6, "price" => 5],
     ]);
 
-    $setCollection = collect([
-        ["quantity" => 11, "items" => [1, 2]],
-        ["quantity" => 6, "items" => [1, 2]],
+    $setCollection = new SubsetCollection([
+        Subset::of([1, 2])->take(11),
+        Subset::of([1, 2])->take(6),
     ]);
 
     $subsetter = new SubsetFinder($collection, $setCollection);
@@ -141,7 +142,7 @@ it('can have multiple items from the collection to look up', function() {
         ->and($subsetter->getRemaining()->toArray())->toBe([]);
 });
 
-it('can have a single item in the setCollections ', function() {
+it('can have a single item in the setCollections ', function () {
     $collection = collect([
         ["id" => 1, "quantity" => 11, "price" => 15],
         ["id" => 2, "quantity" => 6, "price" => 5],
@@ -150,8 +151,8 @@ it('can have a single item in the setCollections ', function() {
         ["id" => 12, "quantity" => 5, "price" => 6],
     ]);
 
-    $setCollection = collect([
-        ["quantity" => 5, "items" => [1, 2, 3, 5, 12]],
+    $setCollection = new SubsetCollection([
+        Subset::of([1, 2, 3, 5, 12])->take(5),
     ]);
 
     $subsetter = new SubsetFinder($collection, $setCollection);
@@ -176,7 +177,7 @@ it('can have a single item in the setCollections ', function() {
 });
 
 
-it('can get the subsets with large number of sets', function() {
+it('can get the subsets with large number of sets', function () {
     $collection = collect([
         ["id" => 1, "quantity" => 2500, "price" => 15],
         ["id" => 2, "quantity" => 2000, "price" => 5],
@@ -185,10 +186,10 @@ it('can get the subsets with large number of sets', function() {
         ["id" => 12, "quantity" => 3650, "price" => 6],
     ]);
 
-    $setCollection = collect([
-        ["quantity" => 5, "items" => [1, 2]],
-        ["quantity" => 5, "items" => [3]],
-        ["quantity" => 5, "items" => [5, 12]],
+    $setCollection = new SubsetCollection([
+        Subset::of([1, 2])->take(5),
+        Subset::of([3])->take(5),
+        Subset::of([5, 12])->take(5),
     ]);
 
     $subsetter = new SubsetFinder($collection, $setCollection);

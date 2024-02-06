@@ -8,10 +8,8 @@ class SubsetFinder
 {
     protected Collection $flatCollection;
 
-    private string $quantityFieldName = 'quantity';
     private string $idFieldName = 'id';
-    private string $itemsFieldName = 'items';
-
+    private string $quantityFieldName = 'quantity';
     private string $sortByField = 'id';
     private bool $sortByDesc = false;
 
@@ -19,11 +17,11 @@ class SubsetFinder
      * SubsetFinder constructor.
      *
      * @param Collection $collection
-     * @param Collection $subSetCriteria
+     * @param SubsetCollection $subsetCollection
      */
     public function __construct(
         public Collection $collection,
-        public Collection $subSetCriteria
+        public SubsetCollection $subsetCollection
     ) {
     }
 
@@ -31,15 +29,13 @@ class SubsetFinder
      * Define the field names for the quantity, items and id fields.
      *
      * @param string $quantity
-     * @param string $items
      * @param string $id
      * @return $this
      */
-    public function defineProps(string $quantity = 'quantity', string $items = 'items', string $id = 'id'): self
+    public function defineProps(string $id = 'id', string $quantity = 'quantity'): self
     {
-        $this->quantityFieldName = $quantity;
-        $this->itemsFieldName = $items;
         $this->idFieldName = $id;
+        $this->quantityFieldName = $quantity;
 
         return $this;
     }
@@ -66,24 +62,24 @@ class SubsetFinder
      */
     public function getSetQuantity(): int
     {
-        return $this->subSetCriteria
-            ->map(fn ($setItem) => $this->calculateQuantityForSet($setItem))
+        return $this->subsetCollection
+            ->map(fn ($subset) => $this->calculateQuantityForSet($subset))
             ->min();
     }
 
     /**
      * Calculate the quantity for a given set item.
      *
-     * @param array $setItem
+     * @param Subset $subset
      * @return int
      */
-    protected function calculateQuantityForSet(array $setItem): int
+    protected function calculateQuantityForSet(Subset $subset): int
     {
         $quantity = $this->collection
-            ->whereIn($this->idFieldName, $setItem[$this->itemsFieldName])
+            ->whereIn($this->idFieldName, $subset->items)
             ->sum($this->quantityFieldName);
 
-        return (int)floor($quantity / $setItem[$this->quantityFieldName]);
+        return (int)floor($quantity / $subset->quantity);
     }
 
     /**
@@ -95,7 +91,7 @@ class SubsetFinder
     {
         return $this->collection
             ->sortBy($this->sortByField, SORT_REGULAR, $this->sortByDesc)
-            ->whereIn($this->idFieldName, $this->subSetCriteria->pluck($this->itemsFieldName)->flatten(1))
+            ->whereIn($this->idFieldName, $this->subsetCollection->pluck('items')->flatten(1))
             ->flatMap(fn ($item) => $this->duplicateItemForQuantity($item));
     }
 
@@ -138,18 +134,19 @@ class SubsetFinder
         // Get the maximum quantity of sets that can be created from the collection
         $maxSetQuantity = $this->getSetQuantity();
 
-        // Initialize a collection to store flattened items
-        $cartFlatten = collect();
 
         // Flatten the collection
         $this->flatCollection = $this->getFlatCollection();
 
+        // Initialize a collection to store flattened items
+        $cartFlatten = collect();
+
         // Iterate over the subset criteria
-        foreach ($this->subSetCriteria as $subsetCriteria) {
+        foreach ($this->subsetCollection as $subset) {
             // Filter and limit items based on subset criteria
             $filteredItems = $this->filterAndLimit(
-                $subsetCriteria[$this->itemsFieldName],
-                $subsetCriteria[$this->quantityFieldName] * $maxSetQuantity
+                $subset->items,
+                $subset->quantity * $maxSetQuantity
             );
 
             // Add filtered items to the collection
@@ -172,10 +169,10 @@ class SubsetFinder
      */
     protected function mapItemGroup(Collection $itemGroup): array
     {
-        $setItem = $itemGroup->first();
-        $setItem[$this->quantityFieldName] = $itemGroup->count();
+        $item = $itemGroup->first();
+        $item[$this->quantityFieldName] = $itemGroup->count();
 
-        return [$setItem[$this->idFieldName] => $setItem];
+        return [$item[$this->idFieldName] => $item];
     }
 
     /**
