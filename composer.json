@@ -4,9 +4,8 @@
     "keywords": [
         "ozdemir",
         "laravel",
-        "shopping",
-        "cart",
-        "discount"
+        "collections",
+        "subset"
     ],
     "homepage": "https://github.com/ozdemir/subset-finder",
     "license": "MIT",
