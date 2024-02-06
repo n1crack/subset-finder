@@ -47,8 +47,8 @@ $subsetter->sortBy('price');
 $subsets = $subsetter->get();
 //  Illuminate\Support\Collection:
 //  all:[
-//    ["id" => 1, "quantity" => 11, "price" => 15],
 //    ["id" => 2, "quantity" => 6, "price" => 5],
+//    ["id" => 1, "quantity" => 9, "price" => 15],
 //    ["id" => 3, "quantity" => 6, "price" => 5]
 //   ]
 
