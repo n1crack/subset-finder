@@ -87,7 +87,7 @@ $subsetter->sortBy('price');
 ```php
 // We can use the fields with the defined names.
 $subsetter->defineProps(
-    id: 'name'
+    id: 'name',
     quantity: 'amount'
 );
 
