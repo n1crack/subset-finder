@@ -43,11 +43,8 @@ $subsetter = new SubsetFinder($collection, $subsetCollection);
 // Optionally, configure sorting
 $subsetter->sortBy('price');
 
-// All subsets that meet the criteria
-$subsets = $subsetter->get();
-
 // $subsets will contain the subsets that meet the criteria
-// output:
+$subsets = $subsetter->get();
 //  Illuminate\Support\Collection:
 //  all:[
 //    ["id" => 1, "quantity" => 11, "price" => 15],
@@ -55,10 +52,8 @@ $subsets = $subsetter->get();
 //    ["id" => 3, "quantity" => 6, "price" => 5]
 //   ]
 
-// Get remaining items
+// $remaining will contain the items that were not selected for any subset
 $remaining = $subsetter->getRemaining();
-// $remaining will contain the items that were not included in any subset
-// output: 
 //  Illuminate\Support\Collection:
 //  all:[
 //    ["id" => 1, "quantity" => 2, "price" => 15],
@@ -66,7 +61,6 @@ $remaining = $subsetter->getRemaining();
 
 // Get the maximum quantity of sets that can be created from the collection.
 $subSetQuantity = $subset->getSetQuantity()
-// returns :
 // 3
 
 ```
