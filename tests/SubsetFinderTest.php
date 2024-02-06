@@ -4,7 +4,7 @@ use Ozdemir\SubsetFinder\Subset;
 use Ozdemir\SubsetFinder\SubsetCollection;
 use Ozdemir\SubsetFinder\SubsetFinder;
 
-it('can find subsets in a collection', function () {
+it('can find subsets in a collection', function() {
     $collection = collect([
         ["id" => 1, "quantity" => 11, "price" => 15],
         ["id" => 2, "quantity" => 6, "price" => 5],
@@ -40,7 +40,7 @@ it('can find subsets in a collection', function () {
         ]);
 });
 
-it('can find subsets in a collection with different field names', function () {
+it('can find subsets in a collection with different field names', function() {
     $collection = collect([
         ["name" => 1, "amount" => 11, "price" => 15],
         ["name" => 2, "amount" => 6, "price" => 5],
@@ -66,7 +66,7 @@ it('can find subsets in a collection with different field names', function () {
         ]);
 });
 
-it('returns blank if it doesnt find anything', function () {
+it('returns blank if it doesnt find anything', function() {
     $collection = collect([
         ["id" => 1, "quantity" => 11, "price" => 15],
         ["id" => 2, "quantity" => 6, "price" => 5],
@@ -90,7 +90,7 @@ it('returns blank if it doesnt find anything', function () {
         ->and($subsetter->getRemaining()->toArray())->toBe($collection->toArray());
 });
 
-it('can cover all items in the collection ', function () {
+it('can cover all items in the collection ', function() {
     $collection = collect([
         ["id" => 1, "quantity" => 11, "price" => 15],
         ["id" => 2, "quantity" => 6, "price" => 5],
@@ -117,7 +117,7 @@ it('can cover all items in the collection ', function () {
         ->and($subsetter->getRemaining()->toArray())->toBe([]);
 });
 
-it('can have multiple items from the collection to look up', function () {
+it('can have multiple items from the collection to look up', function() {
     $collection = collect([
         ["id" => 1, "quantity" => 11, "price" => 15],
         ["id" => 2, "quantity" => 6, "price" => 5],
@@ -142,7 +142,7 @@ it('can have multiple items from the collection to look up', function () {
         ->and($subsetter->getRemaining()->toArray())->toBe([]);
 });
 
-it('can have a single item in the setCollections ', function () {
+it('can have a single item in the setCollections ', function() {
     $collection = collect([
         ["id" => 1, "quantity" => 11, "price" => 15],
         ["id" => 2, "quantity" => 6, "price" => 5],
@@ -177,7 +177,7 @@ it('can have a single item in the setCollections ', function () {
 });
 
 
-it('can get the subsets with large number of sets', function () {
+it('can get the subsets with large number of sets', function() {
     $collection = collect([
         ["id" => 1, "quantity" => 2500, "price" => 15],
         ["id" => 2, "quantity" => 2000, "price" => 5],
