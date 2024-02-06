@@ -81,7 +81,7 @@ $subsetCriteria = collect([
     // etc...
 ]);
 
-// When we have multiple applicable subsets, we can choose to prioritize the ones
+// When we have multiple applicable items for a subset, we can choose to prioritize the ones
 // with any field that exists in the main collection.
 $subsetter->sortBy('price');
 ```
