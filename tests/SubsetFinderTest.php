@@ -9,12 +9,12 @@ it('can find subsets in a collection', function() {
         ["id" => 2, "quantity" => 6, "price" => 5],
         ["id" => 3, "quantity" => 18, "price" => 10],
         ["id" => 5, "quantity" => 4, "price" => 2],
-        ["id" => 12, "quantity" => 5, "price" => 6]
+        ["id" => 12, "quantity" => 5, "price" => 6],
     ]);
 
     $setCollection = collect([
         ["quantity" => 5, "items" => [1, 2]],
-        ["quantity" => 2, "items" => [3]]
+        ["quantity" => 2, "items" => [3]],
     ]);
 
     $subsetter = new SubsetFinder($collection, $setCollection);
@@ -25,7 +25,7 @@ it('can find subsets in a collection', function() {
             ["id" => 1, "quantity" => 2, "price" => 15],
             ["id" => 3, "quantity" => 12, "price" => 10],
             ["id" => 5, "quantity" => 4, "price" => 2],
-            ["id" => 12, "quantity" => 5, "price" => 6]
+            ["id" => 12, "quantity" => 5, "price" => 6],
         ])
         ->and($subsetter->get()->toArray())->toBe([
             ['id' => 2, 'quantity' => 6, 'price' => 5,],
@@ -45,12 +45,12 @@ it('can find subsets in a collection with different field names', function() {
         ["name" => 2, "amount" => 6, "price" => 5],
         ["name" => 3, "amount" => 18, "price" => 10],
         ["name" => 5, "amount" => 4, "price" => 2],
-        ["name" => 12, "amount" => 5, "price" => 6]
+        ["name" => 12, "amount" => 5, "price" => 6],
     ]);
 
     $setCollection = collect([
         ["amount" => 5, "products" => [1, 2]],
-        ["amount" => 2, "products" => [3]]
+        ["amount" => 2, "products" => [3]],
     ]);
 
     $subsetter = new SubsetFinder($collection, $setCollection);
@@ -71,12 +71,12 @@ it('returns blank if it doesnt find anything', function() {
         ["id" => 2, "quantity" => 6, "price" => 5],
         ["id" => 3, "quantity" => 18, "price" => 10],
         ["id" => 5, "quantity" => 4, "price" => 2],
-        ["id" => 12, "quantity" => 5, "price" => 6]
+        ["id" => 12, "quantity" => 5, "price" => 6],
     ]);
 
     $setCollection = collect([
         ["quantity" => 22, "items" => [1, 2]],
-        ["quantity" => 2, "items" => [3]]
+        ["quantity" => 2, "items" => [3]],
     ]);
 
     $subsetter = new SubsetFinder($collection, $setCollection);
@@ -95,7 +95,7 @@ it('can cover all items in the collection ', function() {
         ["id" => 2, "quantity" => 6, "price" => 5],
         ["id" => 3, "quantity" => 18, "price" => 10],
         ["id" => 5, "quantity" => 4, "price" => 2],
-        ["id" => 12, "quantity" => 5, "price" => 6]
+        ["id" => 12, "quantity" => 5, "price" => 6],
     ]);
 
     $setCollection = collect([
@@ -103,7 +103,7 @@ it('can cover all items in the collection ', function() {
         ["quantity" => 6, "items" => [2]],
         ["quantity" => 18, "items" => [3]],
         ["quantity" => 4, "items" => [5]],
-        ["quantity" => 5, "items" => [12]]
+        ["quantity" => 5, "items" => [12]],
     ]);
 
     $subsetter = new SubsetFinder($collection, $setCollection);
@@ -147,7 +147,7 @@ it('can have a single item in the setCollections ', function() {
         ["id" => 2, "quantity" => 6, "price" => 5],
         ["id" => 3, "quantity" => 18, "price" => 10],
         ["id" => 5, "quantity" => 4, "price" => 2],
-        ["id" => 12, "quantity" => 5, "price" => 6]
+        ["id" => 12, "quantity" => 5, "price" => 6],
     ]);
 
     $setCollection = collect([
@@ -171,7 +171,7 @@ it('can have a single item in the setCollections ', function() {
         ])
         // last 4 item will be the most expensive ones so its product 1 in this case
         ->and($subsetter->getRemaining()->toArray())->toBe([
-            ["id" => 1, "quantity" => 4, "price" => 15]
+            ["id" => 1, "quantity" => 4, "price" => 15],
         ]);
 });
 
@@ -182,7 +182,7 @@ it('can get the subsets with large number of sets', function() {
         ["id" => 2, "quantity" => 2000, "price" => 5],
         ["id" => 3, "quantity" => 8000, "price" => 10],
         ["id" => 5, "quantity" => 2900, "price" => 2],
-        ["id" => 12, "quantity" => 3650, "price" => 6]
+        ["id" => 12, "quantity" => 3650, "price" => 6],
     ]);
 
     $setCollection = collect([
@@ -207,4 +207,3 @@ it('can get the subsets with large number of sets', function() {
             ["id" => 12, "quantity" => 2050, "price" => 6],
         ]);
 });
-

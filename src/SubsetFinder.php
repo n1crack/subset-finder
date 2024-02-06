@@ -24,8 +24,7 @@ class SubsetFinder
     public function __construct(
         public Collection $collection,
         public Collection $subSetCriteria
-    )
-    {
+    ) {
     }
 
     /**
@@ -56,6 +55,7 @@ class SubsetFinder
     {
         $this->sortByField = $field;
         $this->sortByDesc = $descending;
+
         return $this;
     }
 
@@ -174,6 +174,7 @@ class SubsetFinder
     {
         $setItem = $itemGroup->first();
         $setItem[$this->quantityFieldName] = $itemGroup->count();
+
         return [$setItem[$this->idFieldName] => $setItem];
     }
 
@@ -211,5 +212,4 @@ class SubsetFinder
 
         return $item;
     }
-
 }
