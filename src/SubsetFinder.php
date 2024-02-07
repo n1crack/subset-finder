@@ -216,7 +216,7 @@ class SubsetFinder
      * @param int $int
      * @return Collection
      */
-    public function getSubsetItems(int $int)
+    public function getSubsetItems(int $int): Collection
     {
         return $this->getFlatCollection()->take($int);
     }
