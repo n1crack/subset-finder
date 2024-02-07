@@ -209,4 +209,15 @@ class SubsetFinder
 
         return $item;
     }
+
+    /**
+     * Return a subset of the collection based on the given integer.
+     *
+     * @param int $int
+     * @return Collection
+     */
+    public function getSubsetItems(int $int)
+    {
+        return $this->getFlatCollection()->take($int);
+    }
 }

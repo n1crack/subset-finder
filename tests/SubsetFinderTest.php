@@ -176,6 +176,39 @@ it('can have a single item in the setCollections ', function() {
         ]);
 });
 
+it('can get n many items as ordered', function () {
+    $collection = collect([
+        ["id" => 1, "quantity" => 11, "price" => 15],
+        ["id" => 2, "quantity" => 6, "price" => 5],
+        ["id" => 3, "quantity" => 18, "price" => 10],
+        ["id" => 5, "quantity" => 4, "price" => 2],
+        ["id" => 12, "quantity" => 5, "price" => 6],
+    ]);
+
+    $setCollection = new SubsetCollection([
+        Subset::of([1, 2, 3, 5, 12])->take(5),
+    ]);
+
+    $subsetter = new SubsetFinder($collection, $setCollection);
+    $subsetter->sortBy('price');
+
+
+    // somemethod will return the first 11 items that is ordered
+    expect($subsetter->getSubsetItems(11)->toArray())->toBe([
+        ["id" => 5, "quantity" => 4, "price" => 2],
+        ["id" => 5, "quantity" => 4, "price" => 2],
+        ["id" => 5, "quantity" => 4, "price" => 2],
+        ["id" => 5, "quantity" => 4, "price" => 2],
+        ["id" => 2, "quantity" => 6, "price" => 5],
+        ["id" => 2, "quantity" => 6, "price" => 5],
+        ["id" => 2, "quantity" => 6, "price" => 5],
+        ["id" => 2, "quantity" => 6, "price" => 5],
+        ["id" => 2, "quantity" => 6, "price" => 5],
+        ["id" => 2, "quantity" => 6, "price" => 5],
+        ["id" => 12, "quantity" => 5, "price" => 6],
+    ]);
+});
+
 
 it('can get the subsets with large number of sets', function() {
     $collection = collect([
