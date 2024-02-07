@@ -176,7 +176,7 @@ it('can have a single item in the setCollections ', function() {
         ]);
 });
 
-it('can get n many items as ordered', function () {
+it('can get n many items as ordered', function() {
     $collection = collect([
         ["id" => 1, "quantity" => 11, "price" => 15],
         ["id" => 2, "quantity" => 6, "price" => 5],
