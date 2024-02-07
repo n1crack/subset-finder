@@ -60,7 +60,7 @@ $remaining = $subsetter->getRemaining();
 //  ]
 
 // Get the maximum quantity of sets that can be created from the collection.
-$subSetQuantity = $subset->getSetQuantity()
+$subSetQuantity = $subsetter->getSetQuantity()
 // 3
 
 ```
