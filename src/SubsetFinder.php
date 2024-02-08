@@ -213,5 +213,4 @@ class SubsetFinder
     {
         return $this->remainingSubsets;
     }
-
 }

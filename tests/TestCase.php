@@ -14,12 +14,12 @@ class TestCase extends Orchestra
 
     protected function convertToArray($subsetables): array
     {
-        return $subsetables->map(fn($subsetable) => $subsetable->toArray())->toArray();
+        return $subsetables->map(fn ($subsetable) => $subsetable->toArray())->toArray();
     }
 
     protected function mockSubsetable($id, $quantity, $price): Subsetable
     {
-        return new class($id, $quantity, $price) implements Subsetable {
+        return new class ($id, $quantity, $price) implements Subsetable {
             public function __construct(
                 public mixed $id,
                 public mixed $quantity,
@@ -47,16 +47,15 @@ class TestCase extends Orchestra
                 return [
                     'id' => $this->getId(),
                     'quantity' => $this->getQuantity(),
-                    'price' => $this->price
+                    'price' => $this->price,
                 ];
             }
         };
     }
 
-
     protected function mockSubsetableAlt($name, $amount, $price): Subsetable
     {
-        return new class($name, $amount, $price) implements Subsetable {
+        return new class ($name, $amount, $price) implements Subsetable {
             public function __construct(
                 public mixed $name,
                 public mixed $amount,
@@ -84,7 +83,7 @@ class TestCase extends Orchestra
                 return [
                     'name' => $this->getId(),
                     'amount' => $this->getQuantity(),
-                    'price' => $this->price
+                    'price' => $this->price,
                 ];
             }
         };
