@@ -67,14 +67,14 @@ class SubsetFinder
     {
         // Get the maximum quantity of sets that can be created from the collection.
         $this->subsetQuantity = $this->subsetCollection
-            ->map(fn ($subset) => $this->calculateQuantityForSet($subset))
+            ->map(fn($subset) => $this->calculateQuantityForSet($subset))
             ->min();
 
         // Get the flattened collection based on the set criteria.
         $this->flatCollection = $this->collection
             ->sortBy($this->sortByField, SORT_REGULAR, $this->sortByDesc)
             ->whereIn($this->idFieldName, $this->subsetCollection->pluck('items')->flatten(1))
-            ->flatMap(fn ($item) => $this->duplicateItemForQuantity($item));
+            ->flatMap(fn($item) => $this->duplicateItemForQuantity($item));
 
         // Find Subsets
         // Initialize a collection to store flattened items
@@ -97,7 +97,7 @@ class SubsetFinder
         $this->foundSubsets = $cartFlatten
             ->flatten(1)
             ->groupBy($this->idFieldName)
-            ->map(fn ($itemGroup) => $this->mapItemGroup($itemGroup))
+            ->map(fn($itemGroup) => $this->mapItemGroup($itemGroup))
             ->values();
 
         // Get the set items with their quantities
@@ -105,8 +105,8 @@ class SubsetFinder
 
         // Calculate remaining quantities for each item, filter out items with zero or negative quantities and return the values
         $this->remainingSubsets = clone($this->collection)
-            ->map(fn ($item) => $this->calculateRemainingQuantity(clone $item, $setItems))
-            ->reject(fn ($item) => $item->getQuantity() <= 0)
+            ->map(fn($item) => $this->calculateRemainingQuantity(clone $item, $setItems))
+            ->reject(fn($item) => $item->getQuantity() <= 0)
             ->values();
     }
 
@@ -133,7 +133,7 @@ class SubsetFinder
      */
     protected function duplicateItemForQuantity(Subsetable $item): Collection
     {
-        return Collection::times($item->getQuantity(), fn () => $item);
+        return Collection::times($item->getQuantity(), fn() => $item);
     }
 
     /**
@@ -146,8 +146,8 @@ class SubsetFinder
     protected function filterAndLimit($filterIds, $filterLimit): Collection
     {
         $filtered = $this->filteredFlatCollection
-            ->filter(fn (Subsetable $item) => in_array($item->getId(), $filterIds))
-            ->map(fn (Subsetable $item) => $item)
+            ->filter(fn(Subsetable $item) => in_array($item->getId(), $filterIds))
+            ->map(fn(Subsetable $item) => $item)
             ->take($filterLimit);
 
         // Remove the filtered items from the collection, so it won't be included in the next iteration

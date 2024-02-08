@@ -14,7 +14,7 @@ class TestCase extends Orchestra
 
     protected function convertToArray($subsetables): array
     {
-        return $subsetables->map(fn ($subsetable) => $subsetable->toArray())->toArray();
+        return $subsetables->map(fn($subsetable) => $subsetable->toArray())->toArray();
     }
 
     protected function mockSubsetable($id, $quantity, $price): Subsetable
