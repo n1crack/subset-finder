@@ -6,12 +6,20 @@ use Illuminate\Support\Collection;
 
 class SubsetFinder
 {
-    protected Collection $flatCollection;
-
     private string $idFieldName = 'id';
     private string $quantityFieldName = 'quantity';
     private string $sortByField = 'id';
     private bool $sortByDesc = false;
+
+    protected Collection $flatCollection;
+
+    protected Collection $filteredFlatCollection;
+
+    protected Collection $foundSubsets;
+
+    protected Collection $remainingSubsets;
+
+    protected int $subsetQuantity;
 
     /**
      * SubsetFinder constructor.
@@ -55,16 +63,51 @@ class SubsetFinder
         return $this;
     }
 
-    /**
-     * Get the maximum quantity of sets that can be created from the collection.
-     *
-     * @return int
-     */
-    public function getSetQuantity(): int
+    public function solve(): void
     {
-        return $this->subsetCollection
+        // Get the maximum quantity of sets that can be created from the collection.
+        $this->subsetQuantity = $this->subsetCollection
             ->map(fn ($subset) => $this->calculateQuantityForSet($subset))
             ->min();
+
+        // Get the flattened collection based on the set criteria.
+        $this->flatCollection = $this->collection
+            ->sortBy($this->sortByField, SORT_REGULAR, $this->sortByDesc)
+            ->whereIn($this->idFieldName, $this->subsetCollection->pluck('items')->flatten(1))
+            ->flatMap(fn ($item) => $this->duplicateItemForQuantity($item));
+
+        // Find Subsets
+        // Initialize a collection to store flattened items
+        $cartFlatten = collect();
+        $this->filteredFlatCollection = clone $this->flatCollection;
+
+        // Iterate over the subset criteria
+        foreach ($this->subsetCollection as $subset) {
+            // Filter and limit items based on subset criteria
+            $filteredItems = $this->filterAndLimit(
+                $subset->items,
+                $subset->quantity * $this->subsetQuantity
+            );
+
+            // Add filtered items to the collection
+            $cartFlatten->push($filteredItems);
+        }
+
+        // Flatten the collection of collections, group by ID, update the quantity and return the values
+        $this->foundSubsets = $cartFlatten
+            ->flatten(1)
+            ->groupBy($this->idFieldName)
+            ->map(fn ($itemGroup) => $this->mapItemGroup($itemGroup))
+            ->values();
+
+        // Get the set items with their quantities
+        $setItems = $this->foundSubsets->pluck($this->quantityFieldName, $this->idFieldName)->toArray();
+
+        // Calculate remaining quantities for each item, filter out items with zero or negative quantities and return the values
+        $this->remainingSubsets = clone($this->collection)
+            ->map(fn ($item) => $this->calculateRemainingQuantity(clone $item, $setItems))
+            ->reject(fn ($item) => $item->getQuantity() <= 0)
+            ->values();
     }
 
     /**
@@ -83,27 +126,14 @@ class SubsetFinder
     }
 
     /**
-     * Get the flattened collection based on the set criteria.
-     *
-     * @return Collection
-     */
-    protected function getFlatCollection(): Collection
-    {
-        return $this->collection
-            ->sortBy($this->sortByField, SORT_REGULAR, $this->sortByDesc)
-            ->whereIn($this->idFieldName, $this->subsetCollection->pluck('items')->flatten(1))
-            ->flatMap(fn ($item) => $this->duplicateItemForQuantity($item));
-    }
-
-    /**
      * Duplicate an item in the collection based on its quantity field value.
      *
-     * @param array $item
+     * @param Subsetable $item
      * @return Collection
      */
-    protected function duplicateItemForQuantity(array $item): Collection
+    protected function duplicateItemForQuantity(Subsetable $item): Collection
     {
-        return Collection::times($item[$this->quantityFieldName], fn () => $item);
+        return Collection::times($item->getQuantity(), fn () => $item);
     }
 
     /**
@@ -115,97 +145,45 @@ class SubsetFinder
      */
     protected function filterAndLimit($filterIds, $filterLimit): Collection
     {
-        $filtered = $this->flatCollection
-            ->filter(fn ($item) => in_array($item[$this->idFieldName], $filterIds))
+        $filtered = $this->filteredFlatCollection
+            ->filter(fn (Subsetable $item) => in_array($item->getId(), $filterIds))
+            ->map(fn (Subsetable $item) => $item)
             ->take($filterLimit);
 
-        $this->flatCollection->forget($filtered->keys()->toArray());
+        // Remove the filtered items from the collection, so it won't be included in the next iteration
+        $this->filteredFlatCollection->forget($filtered->keys()->toArray());
 
         return $filtered;
     }
 
     /**
-     * Get the subset of the collection based on the set criteria.
+     * Map the item group to set quantity and return the Subsetable.
      *
-     * @return Collection
+     * @param Collection<int, Subsetable> $itemGroup
+     * @return Subsetable
      */
-    public function get(): Collection
+    protected function mapItemGroup(Collection $itemGroup): Subsetable
     {
-        // Get the maximum quantity of sets that can be created from the collection
-        $maxSetQuantity = $this->getSetQuantity();
+        $firstItem = clone $itemGroup->first();
+        $firstItem->setQuantity($itemGroup->count());
 
-
-        // Flatten the collection
-        $this->flatCollection = $this->getFlatCollection();
-
-        // Initialize a collection to store flattened items
-        $cartFlatten = collect();
-
-        // Iterate over the subset criteria
-        foreach ($this->subsetCollection as $subset) {
-            // Filter and limit items based on subset criteria
-            $filteredItems = $this->filterAndLimit(
-                $subset->items,
-                $subset->quantity * $maxSetQuantity
-            );
-
-            // Add filtered items to the collection
-            $cartFlatten->push($filteredItems);
-        }
-
-        // Flatten the collection of collections, group by ID, update the quantity and return the values
-        return $cartFlatten
-            ->flatten(1)
-            ->groupBy($this->idFieldName)
-            ->mapWithKeys(fn ($itemGroup) => $this->mapItemGroup($itemGroup))
-            ->values();
-    }
-
-    /**
-     * Map the item group to set quantity and return the mapped key-value pair.
-     *
-     * @param Collection $itemGroup
-     * @return array
-     */
-    protected function mapItemGroup(Collection $itemGroup): array
-    {
-        $item = $itemGroup->first();
-        $item[$this->quantityFieldName] = $itemGroup->count();
-
-        return [$item[$this->idFieldName] => $item];
-    }
-
-    /**
-     *  Get the remaining items in the collection.
-     *
-     * @return Collection
-     */
-    public function getRemaining(): Collection
-    {
-        // Get the set items with their quantities
-        $setItems = $this->get()->pluck($this->quantityFieldName, $this->idFieldName)->toArray();
-
-        // Calculate remaining quantities for each item, filter out items with zero or negative quantities and return the values
-        return $this->collection
-            ->map(fn ($item) => $this->calculateRemainingQuantity($item, $setItems))
-            ->reject(fn ($item) => $item[$this->quantityFieldName] <= 0)
-            ->values();
+        return $firstItem;
     }
 
     /**
      * Calculate the remaining quantity for the given item after applying discounts.
      *
-     * @param array $item
+     * @param Subsetable $item
      * @param array $setItems
-     * @return array
+     * @return Subsetable
      */
-    protected function calculateRemainingQuantity(array $item, array $setItems): array
+    protected function calculateRemainingQuantity(Subsetable $item, array $setItems): Subsetable
     {
         // Calculate the remaining quantity by subtracting the quantity of the item included in the discount sets
-        $remainingQuantity = $item[$this->quantityFieldName] - ($setItems[$item[$this->idFieldName]] ?? 0);
+        $remainingQuantity = $item->getQuantity() - ($setItems[$item->getId()] ?? 0);
 
         // Ensure the remaining quantity is non-negative
-        $item[$this->quantityFieldName] = max($remainingQuantity, 0);
+        $item->setQuantity(max($remainingQuantity, 0));
 
         return $item;
     }
@@ -218,6 +196,22 @@ class SubsetFinder
      */
     public function getSubsetItems(int $int): Collection
     {
-        return $this->getFlatCollection()->take($int);
+        return $this->flatCollection->take($int);
     }
+
+    public function getSubsetQuantity(): int
+    {
+        return $this->subsetQuantity;
+    }
+
+    public function getFoundSubsets(): Collection
+    {
+        return $this->foundSubsets;
+    }
+
+    public function getRemaining(): Collection
+    {
+        return $this->remainingSubsets;
+    }
+
 }

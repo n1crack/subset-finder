@@ -14,7 +14,8 @@ composer require ozdemir/subset-finder
 ```
 
 ## Usage
-Here's a basic example of how to use the SubsetFinder package:
+Here's a basic example of how to use the SubsetFinder package: 
+
 
 ```php
 use Ozdemir\SubsetFinder\SubsetFinder;
@@ -23,11 +24,33 @@ use Ozdemir\SubsetFinder\Subset;
 
 // Define your collection and subset criteria
 
+// Collection should be an instance of Illuminate\Support\Collection
+// and contain items that implement the Ozdemir\SubsetFinder\Subsetable interface.
+
+// example class that implements the Subsetable interface 
+// if you use field names other than 'id' and 'quantity', you need to define them with defineProps method
+class Something implements Subsetable
+{
+    public function __construct(public int $id, public int $quantity, public int $price)
+    {
+    }
+
+    public function getId(): int
+    {
+        return $this->id;
+    }
+
+    public function getQuantity(): int
+    {
+        return $this->quantity;
+    }
+}
+
 $collection = collect([
-  ["id" => 1, "quantity" => 11, "price" => 15],
-  ["id" => 2, "quantity" => 6, "price" => 5],
-  ["id" => 3, "quantity" => 6, "price" => 5]
-    // Add more items...
+  new Something(id: 1, quantity: 11, price: 15),
+  new Something(id: 2, quantity: 6, price: 5),
+  new Something(id: 3, quantity: 6, price: 5)
+   // Add more items...
 ]);
 
 $subsetCollection = new SubsetCollection([
@@ -42,28 +65,32 @@ $subsetter = new SubsetFinder($collection, $subsetCollection);
 
 // Optionally, configure sorting
 $subsetter->sortBy('price');
+// Solve the problem
+$subsetter->solve();
 
 // $subsets will contain the subsets that meet the criteria
-$subsets = $subsetter->get();
+$subsets = $subsetter->getFoundSubsets();
 //  Illuminate\Support\Collection:
 //  all:[
-//    ["id" => 2, "quantity" => 6, "price" => 5],
-//    ["id" => 1, "quantity" => 9, "price" => 15],
-//    ["id" => 3, "quantity" => 6, "price" => 5]
+//    Something(id: 2, quantity: 6, price: 5),
+//    Something(id: 1, quantity: 9, price: 15),
+//    Something(id: 3, quantity: 6, price: 5)
 //   ]
 
 // $remaining will contain the items that were not selected for any subset
 $remaining = $subsetter->getRemaining();
 //  Illuminate\Support\Collection:
 //  all:[
-//    ["id" => 1, "quantity" => 2, "price" => 15],
+//    Something(id: 1, quantity: 2, price: 15),
 //  ]
 
 // Get the maximum quantity of sets that can be created from the collection.
-$subSetQuantity = $subsetter->getSetQuantity()
+$subSetQuantity = $subsetter->getSubsetQuantity()
 // 3
 
 ```
+
+You can check the tests for more examples.
 
 ## Configuration
 
@@ -80,27 +107,34 @@ $subsetCollection = new SubsetCollection([
 // When we have multiple applicable items for a subset, we can choose to prioritize the ones
 // with any field that exists in the main collection.
 $subsetter->sortBy('price');
+$subsetter->solve();
+
 ```
 
 ### Define the field names for the quantity, items and id fields. 
 
 ```php
-// We can use the fields with the defined names.
+
+$collection = collect([
+    new Something() // let's say, we have an object with the ["name" => 1, "amount" => 11, "price" => 15]
+    // Add more items...
+]);
+
+// Find a subset with a total amount of 5 from items named 1 and 2 in the collection
+// this part doesn't change
+$setCollection = collect([
+     Subset::of([1, 2])->take(5) 
+    // define more...
+]);
+
+// We need to define the field names for the 'quantity' and 'id' fields.
 $subsetter->defineProps(
     id: 'name',
     quantity: 'amount'
 );
 
-$collection = collect([
-    ["name" => 1, "amount" => 11, "price" => 15],
-    // Add more items...
-]);
+$subsetter->solve();
 
-// Find a subset with a total amount (quantity) of 5 from items named 1 and 2 (id) in the collection
-$setCollection = collect([
-     Subset::of([1, 2])->take(5) 
-    // define more...
-]);
 ```
 
 ## Testing
