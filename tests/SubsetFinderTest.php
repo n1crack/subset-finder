@@ -4,7 +4,7 @@ use Ozdemir\SubsetFinder\Subset;
 use Ozdemir\SubsetFinder\SubsetCollection;
 use Ozdemir\SubsetFinder\SubsetFinder;
 
-it('can find subsets in a collection', function() {
+it('can find subsets in a collection', function () {
     $collection = collect([
         $this->mockSubsetable(id: 1, quantity: 11, price: 15),
         $this->mockSubsetable(id: 2, quantity: 6, price: 5),
@@ -41,7 +41,7 @@ it('can find subsets in a collection', function() {
         ]);
 });
 
-it('can find subsets in a collection with different field names', function() {
+it('can find subsets in a collection with different field names', function () {
     $collection = collect([
         $this->mockSubsetableAlt(1, 11, 15),
         $this->mockSubsetableAlt(2, 6, 5),
@@ -68,7 +68,7 @@ it('can find subsets in a collection with different field names', function() {
         ]);
 });
 
-it('returns blank if it doesnt find anything', function() {
+it('returns blank if it doesnt find anything', function () {
     $collection = collect([
         $this->mockSubsetable(1, 11, 15),
         $this->mockSubsetable(2, 6, 5),
@@ -93,7 +93,7 @@ it('returns blank if it doesnt find anything', function() {
         ->and($this->convertToArray($subsetFinder->getRemaining()))->toBe($this->convertToArray($collection));
 });
 
-it('can cover all items in the collection ', function() {
+it('can cover all items in the collection ', function () {
     $collection = collect([
         $this->mockSubsetable(1, 11, 15),
         $this->mockSubsetable(2, 6, 5),
@@ -122,7 +122,7 @@ it('can cover all items in the collection ', function() {
         ->and($this->convertToArray($subsetFinder->getRemaining()))->toBe([]);
 });
 
-it('can have multiple items from the collection to look up', function() {
+it('can have multiple items from the collection to look up', function () {
     $collection = collect([
         $this->mockSubsetable(1, 11, 15),
         $this->mockSubsetable(2, 6, 5),
@@ -148,7 +148,7 @@ it('can have multiple items from the collection to look up', function() {
         ->and($this->convertToArray($subsetFinder->getRemaining()))->toBe([]);
 });
 
-it('can have a single item in the setCollections ', function() {
+it('can have a single item in the setCollections ', function () {
     $collection = collect([
         $this->mockSubsetable(1, 11, 15),
         $this->mockSubsetable(2, 6, 5),
@@ -183,7 +183,7 @@ it('can have a single item in the setCollections ', function() {
         ]);
 });
 
-it('can get n many items as ordered', function() {
+it('can get n many items as ordered', function () {
     $collection = collect([
         $this->mockSubsetable(1, 11, 15),
         $this->mockSubsetable(2, 6, 5),
@@ -217,7 +217,7 @@ it('can get n many items as ordered', function() {
 });
 
 
-it('can get the subsets with large number of sets', function() {
+it('can get the subsets with large number of sets', function () {
     $collection = collect([
         $this->mockSubsetable(1, 2500, 15),
         $this->mockSubsetable(2, 2000, 5),
