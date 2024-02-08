@@ -4,7 +4,7 @@
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/n1crack/subset-finder/run-tests.yml)](https://github.com/n1crack/subset-finder/actions)
 [![GitHub](https://img.shields.io/github/license/n1crack/subset-finder)](https://github.com/n1crack/subset-finder/blob/main/LICENSE.md)
 
-The SubsetFinder package allows you to find subsets within a given collection based on specified criteria. It's particularly useful for scenarios where you need to extract subsets of items from a larger collection, such as in discount calculation or inventory management systems.
+The SubsetFinder PHP Package, utilizing Laravel collection functionality, empowers users to efficiently identify subsets within a given collection according to defined criteria. This tool proves invaluable in scenarios requiring extraction of specific item subsets from a larger collection, such as in discount calculation algorithms or inventory management systems
 
 ## Installation
 You can install the SubsetFinder package via Composer:
