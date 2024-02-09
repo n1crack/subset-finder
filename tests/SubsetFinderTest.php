@@ -68,7 +68,7 @@ it('can find subsets in a collection with different field names', function() {
         ]);
 });
 
-it('returns blank if it doesnt find anything', function() {
+it('can return empty if there is no subset found', function() {
     $collection = collect([
         $this->mockSubsetable(1, 11, 15),
         $this->mockSubsetable(2, 6, 5),
@@ -87,13 +87,13 @@ it('returns blank if it doesnt find anything', function() {
     $subsetFinder->solve();
 
     expect($subsetFinder->getSubsetQuantity())->toBe(0)
-        // blank array
+        // empty array
         ->and($this->convertToArray($subsetFinder->getFoundSubsets()))->toBe([])
         // its same as the collection
         ->and($this->convertToArray($subsetFinder->getRemaining()))->toBe($this->convertToArray($collection));
 });
 
-it('can cover all items in the collection ', function() {
+it('can cover all items in the collection and remaining will be empty array ', function() {
     $collection = collect([
         $this->mockSubsetable(1, 11, 15),
         $this->mockSubsetable(2, 6, 5),
@@ -183,7 +183,7 @@ it('can have a single item in the setCollections ', function() {
         ]);
 });
 
-it('can get n many items as ordered', function() {
+it('can get "n" many items by current order', function() {
     $collection = collect([
         $this->mockSubsetable(1, 11, 15),
         $this->mockSubsetable(2, 6, 5),
