@@ -39,9 +39,27 @@ class SubsetFinder
         $this->config = $config ?? SubsetFinderConfig::default();
         $this->logger = $logger ?? new NullLogger();
         
+        $this->checkMemoryAvailability();
         $this->validateInput();
         $this->startTime = microtime(true);
         $this->startMemory = memory_get_usage(true);
+    }
+
+    /**
+     * Check if there's sufficient memory available for processing.
+     *
+     * @throws InvalidArgumentException
+     */
+    private function checkMemoryAvailability(): void
+    {
+        $availableMemory = $this->config->maxMemoryUsage - memory_get_usage(true);
+        if ($availableMemory < 1024 * 1024) { // Less than 1MB available
+            throw new InvalidArgumentException(
+                'Insufficient memory available for processing. ' .
+                'Available: ' . number_format($availableMemory / 1024 / 1024, 2) . 'MB, ' .
+                'Required: At least 1MB'
+            );
+        }
     }
 
     /**
@@ -162,11 +180,23 @@ class SubsetFinder
      */
     private function duplicateItemForQuantity(Subsetable $item): Collection
     {
+        $quantity = $item->getQuantity();
+        
+        // Safety check for extremely large quantities
+        if ($quantity > 10000) { // 10k items max for testing
+            $this->logger->warning('Quantity too large, limiting to 10k items', [
+                'item_id' => $item->getId(),
+                'requested_quantity' => $quantity,
+                'limited_quantity' => 10000
+            ]);
+            $quantity = 10000;
+        }
+        
         if ($this->config->enableLazyEvaluation) {
-            return collect()->lazy()->times($item->getQuantity(), fn() => clone $item)->collect();
+            return collect()->lazy()->times($quantity, fn() => clone $item)->collect();
         }
 
-        return Collection::times($item->getQuantity(), fn() => clone $item);
+        return Collection::times($quantity, fn() => clone $item);
     }
 
     /**

@@ -6,18 +6,18 @@
 
 A powerful and flexible PHP package for efficiently finding subsets within collections based on quantity criteria. Built with Laravel collections and optimized for performance, memory efficiency, and developer experience.
 
-## ✨ Features
+## Features
 
-- **🚀 High Performance**: Optimized algorithms with configurable memory limits
-- **🔧 Flexible Configuration**: Multiple configuration profiles for different use cases
-- **📊 Performance Monitoring**: Built-in metrics and logging capabilities
-- **🛡️ Robust Error Handling**: Comprehensive validation and meaningful error messages
-- **🎯 Type Safety**: Full PHP 8.1+ type support with strict validation
-- **📝 Comprehensive Testing**: 100% test coverage with Pest PHP
-- **🔌 Laravel Integration**: Service provider, facade, and trait support
-- **💾 Memory Efficient**: Optional lazy evaluation for large datasets
+- **High Performance**: Optimized algorithms with configurable memory limits
+- **Flexible Configuration**: Multiple configuration profiles for different use cases
+- **Performance Monitoring**: Built-in metrics and logging capabilities
+- **Robust Error Handling**: Comprehensive validation and meaningful error messages
+- **Type Safety**: Full PHP 8.1+ type support with strict validation
+- **Comprehensive Testing**: 100% test coverage with Pest PHP
+- **Laravel Integration**: Service provider, facade, and trait support
+- **Memory Efficient**: Optional lazy evaluation for large datasets
 
-## 📦 Installation
+## Installation
 
 ```bash
 composer require ozdemir/subset-finder
@@ -31,7 +31,7 @@ The package automatically registers with Laravel. If you need to publish the con
 php artisan vendor:publish --tag=subset-finder-config
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Basic Usage
 
@@ -132,7 +132,7 @@ if ($products->canSatisfySubsets($subsetCollection)) {
 }
 ```
 
-## 🎯 Use Cases
+## Use Cases
 
 ### E-commerce Bundle Creation
 ```php
@@ -172,7 +172,7 @@ $subsetFinder = new SubsetFinder($inventory, $orders);
 $subsetFinder->solve();
 ```
 
-## ⚙️ Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -214,7 +214,7 @@ return [
 ];
 ```
 
-## 📊 Performance Monitoring
+## Performance Monitoring
 
 ```php
 $subsetFinder = new SubsetFinder($collection, $subsetCollection);
@@ -237,7 +237,7 @@ $isOptimal = $subsetFinder->isOptimal();           // true if no remaining items
 $efficiency = $subsetFinder->getEfficiencyPercentage(); // 95.2%
 ```
 
-## 🛡️ Error Handling
+## Error Handling
 
 ```php
 use Ozdemir\SubsetFinder\Exceptions\InvalidArgumentException;
@@ -255,7 +255,7 @@ try {
 }
 ```
 
-## 🧪 Testing
+## Testing
 
 ```bash
 # Run tests
@@ -268,7 +268,7 @@ composer test-coverage
 composer analyse
 ```
 
-## 📈 Performance Tips
+## Performance Tips
 
 1. **Use appropriate configuration profiles** for your dataset size
 2. **Enable lazy evaluation** for large collections to reduce memory usage
@@ -276,7 +276,7 @@ composer analyse
 4. **Use meaningful sort fields** to optimize subset selection
 5. **Consider batch processing** for very large datasets
 
-## 🔧 Advanced Usage
+## Advanced Usage
 
 ### Custom Logging
 
@@ -311,21 +311,21 @@ foreach ($collection->chunk($batchSize) as $batch) {
 }
 ```
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-## 📄 License
+## License
 
 This package is open-sourced software licensed under the [MIT License](LICENSE.md).
 
-## 🆘 Support
+## Support
 
 - **Documentation**: [GitHub Wiki](https://github.com/n1crack/subset-finder/wiki)
 - **Issues**: [GitHub Issues](https://github.com/n1crack/subset-finder/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/n1crack/subset-finder/discussions)
 
-## 🗺️ Roadmap
+## Roadmap
 
 - [ ] Support for weighted subset selection
 - [ ] Parallel processing for large datasets
@@ -335,6 +335,4 @@ This package is open-sourced software licensed under the [MIT License](LICENSE.m
 - [ ] More configuration profiles
 - [ ] Performance benchmarking tools
 
----
 
-**Made with ❤️ by the SubsetFinder team**

@@ -24,7 +24,9 @@
     "require-dev": {
         "nunomaduro/collision": "^7.0",
         "orchestra/testbench": "^v8.5",
-        "pestphp/pest": "^2.0"
+        "pestphp/pest": "^4.0",
+        "phpstan/phpstan": "^1.10",
+        "infection/infection": "^0.27"
     },
     "autoload": {
         "psr-4": {
