@@ -2,12 +2,11 @@
 
 namespace Ozdemir\SubsetFinder\Tests;
 
+use Ozdemir\SubsetFinder\Exceptions\InvalidArgumentException;
 use Ozdemir\SubsetFinder\Subset;
 use Ozdemir\SubsetFinder\SubsetCollection;
 use Ozdemir\SubsetFinder\SubsetFinder;
 use Ozdemir\SubsetFinder\SubsetFinderConfig;
-use Ozdemir\SubsetFinder\Exceptions\InvalidArgumentException;
-use Ozdemir\SubsetFinder\Exceptions\InsufficientQuantityException;
 
 class EdgeCaseTest extends TestCase
 {
@@ -26,7 +25,7 @@ class EdgeCaseTest extends TestCase
         ]);
 
         $subsetFinder = new SubsetFinder($collection, $subsetCollection);
-        
+
         // Should not cause memory issues or crashes
         $this->expectNotToPerformAssertions();
         $subsetFinder->solve();
@@ -47,7 +46,7 @@ class EdgeCaseTest extends TestCase
         ]);
 
         $subsetFinder = new SubsetFinder($collection, $subsetCollection);
-        
+
         // With quantity 0 for item 1, we can still create 2 subsets
         // because (0 + 10) / 5 = 2
         $subsetFinder->solve();
@@ -63,7 +62,7 @@ class EdgeCaseTest extends TestCase
         // Since the interface enforces int type, we can't test negative values directly
         // Instead, we'll test that the interface properly enforces positive integers
         $this->expectNotToPerformAssertions();
-        
+
         // The interface should prevent negative quantities at the type level
         // This is enforced by PHP's type system, not our code
     }
@@ -185,7 +184,7 @@ class EdgeCaseTest extends TestCase
         );
 
         $subsetFinder = new SubsetFinder($collection, $subsetCollection, $config);
-        
+
         // Should throw exception for invalid field names
         $this->expectException(\Ozdemir\SubsetFinder\Exceptions\InsufficientQuantityException::class);
         $subsetFinder->solve();
@@ -274,7 +273,7 @@ class EdgeCaseTest extends TestCase
         ]);
 
         $subsetFinder = new SubsetFinder($collection, $subsetCollection);
-        
+
         // Should throw exception for insufficient quantities
         $this->expectException(\Ozdemir\SubsetFinder\Exceptions\InsufficientQuantityException::class);
         $subsetFinder->solve();
@@ -289,7 +288,7 @@ class EdgeCaseTest extends TestCase
         $subsetCollection = $this->createLargeSubsetCollection(100); // Many subsets
 
         $subsetFinder = new SubsetFinder($collection, $subsetCollection);
-        
+
         // Should not crash with many subsets
         $this->expectNotToPerformAssertions();
         $subsetFinder->solve();
@@ -304,7 +303,7 @@ class EdgeCaseTest extends TestCase
         // Since the interface enforces int type, we can't test float values directly
         // Instead, we'll test that the interface properly enforces integers
         $this->expectNotToPerformAssertions();
-        
+
         // The interface should prevent float quantities at the type level
         // This is enforced by PHP's type system, not our code
     }
@@ -318,7 +317,7 @@ class EdgeCaseTest extends TestCase
         // Since the interface enforces int type, we can't test null values directly
         // Instead, we'll test that the interface properly enforces non-null integers
         $this->expectNotToPerformAssertions();
-        
+
         // The interface should prevent null quantities at the type level
         // This is enforced by PHP's type system, not our code
     }
@@ -329,7 +328,7 @@ class EdgeCaseTest extends TestCase
     private function createLargeCollection(int $size): \Illuminate\Support\Collection
     {
         $collection = collect();
-        
+
         for ($i = 1; $i <= $size; $i++) {
             $collection->push($this->mockSubsetable(
                 $i,
@@ -337,7 +336,7 @@ class EdgeCaseTest extends TestCase
                 rand(1000, 10000) / 100
             ));
         }
-        
+
         return $collection;
     }
 
@@ -347,18 +346,18 @@ class EdgeCaseTest extends TestCase
     private function createLargeSubsetCollection(int $size): SubsetCollection
     {
         $subsets = [];
-        
+
         for ($i = 0; $i < $size; $i++) {
             $itemCount = rand(1, 3);
             $items = [];
-            
+
             for ($j = 0; $j < $itemCount; $j++) {
                 $items[] = rand(1, 50); // Ensure item IDs are within collection range
             }
-            
+
             $subsets[] = Subset::of(array_unique($items))->take(rand(1, 5)); // Smaller quantities
         }
-        
+
         return new SubsetCollection($subsets);
     }
 }
