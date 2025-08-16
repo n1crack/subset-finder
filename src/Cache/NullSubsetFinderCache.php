@@ -9,11 +9,13 @@ class NullSubsetFinderCache implements SubsetFinderCache
 {
     public function __construct(
         private LoggerInterface $logger = new NullLogger()
-    ) {}
+    ) {
+    }
 
     public function get(string $key): ?array
     {
         $this->logger->debug('Null cache get (no-op)', ['key' => $key]);
+
         return null;
     }
 
@@ -26,6 +28,7 @@ class NullSubsetFinderCache implements SubsetFinderCache
     public function has(string $key): bool
     {
         $this->logger->debug('Null cache has (always false)', ['key' => $key]);
+
         return false;
     }
 
@@ -41,7 +44,7 @@ class NullSubsetFinderCache implements SubsetFinderCache
         $data = [
             'collection' => $this->hashCollection($collection),
             'subsets' => $this->hashSubsets($subsets),
-            'config' => $this->hashConfig($config)
+            'config' => $this->hashConfig($config),
         ];
 
         return hash('sha256', json_encode($data));
@@ -57,8 +60,9 @@ class NullSubsetFinderCache implements SubsetFinderCache
                 $hash[] = json_encode($item);
             }
         }
-        
+
         sort($hash);
+
         return hash('md5', implode('|', $hash));
     }
 
@@ -72,8 +76,9 @@ class NullSubsetFinderCache implements SubsetFinderCache
                 $hash[] = json_encode($subset);
             }
         }
-        
+
         sort($hash);
+
         return hash('md5', implode('|', $hash));
     }
 
@@ -81,7 +86,7 @@ class NullSubsetFinderCache implements SubsetFinderCache
     {
         $relevantKeys = ['maxMemoryUsage', 'enableLazyEvaluation', 'profile'];
         $relevantConfig = array_intersect_key($config, array_flip($relevantKeys));
-        
+
         return hash('md5', json_encode($relevantConfig));
     }
 }

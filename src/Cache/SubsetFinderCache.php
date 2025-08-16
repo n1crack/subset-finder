@@ -2,8 +2,6 @@
 
 namespace Ozdemir\SubsetFinder\Cache;
 
-use Psr\Cache\CacheItemPoolInterface;
-
 interface SubsetFinderCache
 {
     /**

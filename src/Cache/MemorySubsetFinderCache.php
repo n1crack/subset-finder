@@ -12,7 +12,8 @@ class MemorySubsetFinderCache implements SubsetFinderCache
 
     public function __construct(
         private LoggerInterface $logger = new NullLogger()
-    ) {}
+    ) {
+    }
 
     public function get(string $key): ?array
     {
@@ -21,6 +22,7 @@ class MemorySubsetFinderCache implements SubsetFinderCache
         }
 
         $this->logger->debug('Memory cache hit', ['key' => $key]);
+
         return $this->cache[$key];
     }
 
@@ -28,9 +30,9 @@ class MemorySubsetFinderCache implements SubsetFinderCache
     {
         $this->cache[$key] = $result;
         $this->expiry[$key] = time() + $ttl;
-        
+
         $this->logger->debug('Memory cache set', ['key' => $key, 'ttl' => $ttl]);
-        
+
         // Clean up expired entries
         $this->cleanup();
     }
@@ -44,6 +46,7 @@ class MemorySubsetFinderCache implements SubsetFinderCache
         // Check if expired
         if (isset($this->expiry[$key]) && time() > $this->expiry[$key]) {
             unset($this->cache[$key], $this->expiry[$key]);
+
             return false;
         }
 
@@ -55,7 +58,7 @@ class MemorySubsetFinderCache implements SubsetFinderCache
         $count = count($this->cache);
         $this->cache = [];
         $this->expiry = [];
-        
+
         $this->logger->info('Memory cache cleared', ['keys_count' => $count]);
     }
 
@@ -65,7 +68,7 @@ class MemorySubsetFinderCache implements SubsetFinderCache
         $data = [
             'collection' => $this->hashCollection($collection),
             'subsets' => $this->hashSubsets($subsets),
-            'config' => $this->hashConfig($config)
+            'config' => $this->hashConfig($config),
         ];
 
         return hash('sha256', json_encode($data));
@@ -81,8 +84,9 @@ class MemorySubsetFinderCache implements SubsetFinderCache
                 $hash[] = json_encode($item);
             }
         }
-        
+
         sort($hash);
+
         return hash('md5', implode('|', $hash));
     }
 
@@ -96,8 +100,9 @@ class MemorySubsetFinderCache implements SubsetFinderCache
                 $hash[] = json_encode($subset);
             }
         }
-        
+
         sort($hash);
+
         return hash('md5', implode('|', $hash));
     }
 
@@ -105,7 +110,7 @@ class MemorySubsetFinderCache implements SubsetFinderCache
     {
         $relevantKeys = ['maxMemoryUsage', 'enableLazyEvaluation', 'profile'];
         $relevantConfig = array_intersect_key($config, array_flip($relevantKeys));
-        
+
         return hash('md5', json_encode($relevantConfig));
     }
 
@@ -113,7 +118,7 @@ class MemorySubsetFinderCache implements SubsetFinderCache
     {
         $now = time();
         $expired = array_filter($this->expiry, fn($expiry) => $now > $expiry);
-        
+
         foreach (array_keys($expired) as $key) {
             unset($this->cache[$key], $this->expiry[$key]);
         }
@@ -129,11 +134,11 @@ class MemorySubsetFinderCache implements SubsetFinderCache
     public function getStats(): array
     {
         $this->cleanup();
-        
+
         return [
             'total_keys' => count($this->cache),
             'memory_usage' => memory_get_usage(true),
-            'peak_memory' => memory_get_peak_usage(true)
+            'peak_memory' => memory_get_peak_usage(true),
         ];
     }
 }

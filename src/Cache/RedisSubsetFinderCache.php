@@ -2,9 +2,9 @@
 
 namespace Ozdemir\SubsetFinder\Cache;
 
-use Redis;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Redis;
 
 class RedisSubsetFinderCache implements SubsetFinderCache
 {
@@ -15,14 +15,15 @@ class RedisSubsetFinderCache implements SubsetFinderCache
         private Redis $redis,
         private LoggerInterface $logger = new NullLogger(),
         private string $prefix = self::CACHE_PREFIX
-    ) {}
+    ) {
+    }
 
     public function get(string $key): ?array
     {
         try {
             $fullKey = $this->prefix . $key;
             $cached = $this->redis->get($fullKey);
-            
+
             if ($cached === false) {
                 return null;
             }
@@ -31,18 +32,21 @@ class RedisSubsetFinderCache implements SubsetFinderCache
             if (json_last_error() !== JSON_ERROR_NONE) {
                 $this->logger->warning('Failed to decode cached result', [
                     'key' => $key,
-                    'error' => json_last_error_msg()
+                    'error' => json_last_error_msg(),
                 ]);
+
                 return null;
             }
 
             $this->logger->debug('Cache hit', ['key' => $key]);
+
             return $result;
         } catch (\Exception $e) {
             $this->logger->error('Redis get operation failed', [
                 'key' => $key,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
@@ -52,12 +56,13 @@ class RedisSubsetFinderCache implements SubsetFinderCache
         try {
             $fullKey = $this->prefix . $key;
             $serialized = json_encode($result);
-            
+
             if (json_last_error() !== JSON_ERROR_NONE) {
                 $this->logger->error('Failed to serialize result for caching', [
                     'key' => $key,
-                    'error' => json_last_error_msg()
+                    'error' => json_last_error_msg(),
                 ]);
+
                 return;
             }
 
@@ -66,7 +71,7 @@ class RedisSubsetFinderCache implements SubsetFinderCache
         } catch (\Exception $e) {
             $this->logger->error('Redis set operation failed', [
                 'key' => $key,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -75,12 +80,14 @@ class RedisSubsetFinderCache implements SubsetFinderCache
     {
         try {
             $fullKey = $this->prefix . $key;
+
             return $this->redis->exists($fullKey) > 0;
         } catch (\Exception $e) {
             $this->logger->error('Redis exists operation failed', [
                 'key' => $key,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
@@ -95,7 +102,7 @@ class RedisSubsetFinderCache implements SubsetFinderCache
             }
         } catch (\Exception $e) {
             $this->logger->error('Redis clear operation failed', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -106,7 +113,7 @@ class RedisSubsetFinderCache implements SubsetFinderCache
         $data = [
             'collection' => $this->hashCollection($collection),
             'subsets' => $this->hashSubsets($subsets),
-            'config' => $this->hashConfig($config)
+            'config' => $this->hashConfig($config),
         ];
 
         return hash('sha256', json_encode($data));
@@ -123,8 +130,9 @@ class RedisSubsetFinderCache implements SubsetFinderCache
                 $hash[] = json_encode($item);
             }
         }
-        
+
         sort($hash);
+
         return hash('md5', implode('|', $hash));
     }
 
@@ -138,8 +146,9 @@ class RedisSubsetFinderCache implements SubsetFinderCache
                 $hash[] = json_encode($subset);
             }
         }
-        
+
         sort($hash);
+
         return hash('md5', implode('|', $hash));
     }
 
@@ -148,7 +157,7 @@ class RedisSubsetFinderCache implements SubsetFinderCache
         // Only hash relevant configuration options
         $relevantKeys = ['maxMemoryUsage', 'enableLazyEvaluation', 'profile'];
         $relevantConfig = array_intersect_key($config, array_flip($relevantKeys));
-        
+
         return hash('md5', json_encode($relevantConfig));
     }
 }

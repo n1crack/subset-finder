@@ -36,6 +36,7 @@ class CacheFactory
     {
         if (!extension_loaded('redis')) {
             $logger->warning('Redis extension not available, falling back to memory cache');
+
             return new MemorySubsetFinderCache($logger);
         }
 
@@ -43,32 +44,33 @@ class CacheFactory
             if (!class_exists('\Redis')) {
                 throw new \Exception('Redis class not available');
             }
-            
+
             $redis = new \Redis();
-            
+
             $host = $config['host'] ?? '127.0.0.1';
             $port = $config['port'] ?? 6379;
             $timeout = $config['timeout'] ?? 0.0;
             $retryInterval = $config['retry_interval'] ?? 0;
             $readTimeout = $config['read_timeout'] ?? 0.0;
-            
+
             $redis->connect($host, $port, $timeout, null, $retryInterval, $readTimeout);
-            
+
             if (isset($config['password'])) {
                 $redis->auth($config['password']);
             }
-            
+
             if (isset($config['database'])) {
                 $redis->select($config['database']);
             }
-            
+
             $prefix = $config['prefix'] ?? 'subset_finder:';
-            
+
             return new RedisSubsetFinderCache($redis, $logger, $prefix);
         } catch (\Exception $e) {
             $logger->error('Failed to connect to Redis, falling back to memory cache', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return new MemorySubsetFinderCache($logger);
         }
     }
@@ -79,11 +81,11 @@ class CacheFactory
     public static function getAvailableTypes(): array
     {
         $types = [self::TYPE_MEMORY, self::TYPE_NULL];
-        
+
         if (extension_loaded('redis')) {
             $types[] = self::TYPE_REDIS;
         }
-        
+
         return $types;
     }
 
