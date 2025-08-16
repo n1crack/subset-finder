@@ -327,12 +327,31 @@ This package is open-sourced software licensed under the [MIT License](LICENSE.m
 
 ## Roadmap
 
-- [ ] Support for weighted subset selection
-- [ ] Parallel processing for large datasets
+### ✅ **Redis Caching Support**
+- **High-performance caching** with Redis integration
+- **Memory-based fallback** when Redis is unavailable
+- **Smart cache key generation** based on input data
+- **Configurable TTL** and cache management
+- **Automatic fallback** to memory cache on Redis failure
+
+### ✅ **Parallel Processing**
+- **Multi-process subset finding** for large datasets
+- **Intelligent chunking** with optimal size calculation
+- **System-aware process limits** based on CPU and memory
+- **Simulated parallel processing** for development environments
+- **Performance metrics** for parallel operations
+
+### ✅ **Weighted Subset Selection**
+- **Multi-criteria optimization** with configurable weights
+- **Advanced constraint handling** (ranges, custom functions)
+- **Efficiency scoring** and ranking algorithms
+- **Statistical analysis** with quartiles and distributions
+- **Real-world optimization** scenarios (e-commerce, inventory)
+
+### 🔄 **In Development**
 - [ ] Machine learning-based optimization
 - [ ] GraphQL integration
-- [ ] Redis caching support
-- [ ] More configuration profiles
 - [ ] Performance benchmarking tools
+- [ ] More configuration profiles
 
 

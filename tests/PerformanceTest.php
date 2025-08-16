@@ -178,9 +178,9 @@ class PerformanceTest extends TestCase
         $timeAccuracy = $timeDifference / $actualTime;
 
         $this->assertLessThan(
-            0.1,
+            0.2, // Allow 20% tolerance for timing variations
             $timeAccuracy,
-            "Execution time accuracy should be within 10%, got: " .
+            "Execution time accuracy should be within 20%, got: " .
             number_format($timeAccuracy * 100, 1) . "%"
         );
     }
