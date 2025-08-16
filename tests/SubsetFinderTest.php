@@ -1,15 +1,15 @@
 <?php
 
+use Ozdemir\SubsetFinder\Exceptions\InsufficientQuantityException;
+use Ozdemir\SubsetFinder\Exceptions\InvalidArgumentException;
 use Ozdemir\SubsetFinder\Subset;
 use Ozdemir\SubsetFinder\SubsetCollection;
 use Ozdemir\SubsetFinder\SubsetFinder;
 use Ozdemir\SubsetFinder\SubsetFinderConfig;
-use Ozdemir\SubsetFinder\Exceptions\InvalidArgumentException;
-use Ozdemir\SubsetFinder\Exceptions\InsufficientQuantityException;
 
 it('can create a simple subset', function() {
     $subset = Subset::of([1, 2])->take(5);
-    
+
     expect($subset)->toBeInstanceOf(Subset::class)
         ->and($subset->items)->toBe([1, 2])
         ->and($subset->quantity)->toBe(5);
@@ -20,7 +20,7 @@ it('can create a subset collection', function() {
         Subset::of([1, 2])->take(5),
         Subset::of([3])->take(2),
     ]);
-    
+
     expect($subsetCollection)->toBeInstanceOf(SubsetCollection::class)
         ->and($subsetCollection->count())->toBe(2);
 });
@@ -122,7 +122,7 @@ it('can return empty if there is no subset found', function() {
     );
 
     $subsetFinder = new SubsetFinder($collection, $setCollection, $config);
-    
+
     expect(fn() => $subsetFinder->solve())->toThrow(InsufficientQuantityException::class);
 });
 
@@ -327,7 +327,7 @@ it('can get performance metrics', function() {
     $subsetFinder->solve();
 
     $metrics = $subsetFinder->getPerformanceMetrics();
-    
+
     expect($metrics)->toHaveKeys([
         'execution_time_ms',
         'memory_peak_mb',
@@ -335,7 +335,7 @@ it('can get performance metrics', function() {
         'collection_size',
         'subset_count',
         'found_subsets_count',
-        'remaining_items_count'
+        'remaining_items_count',
     ]);
 });
 
@@ -411,7 +411,7 @@ it('validates SubsetCollection items properly', function() {
         Subset::of([1, 2])->take(5),
         Subset::of([3])->take(2),
     ]);
-    
+
     expect($validCollection)->toBeInstanceOf(SubsetCollection::class)
         ->and($validCollection->count())->toBe(2);
 });
