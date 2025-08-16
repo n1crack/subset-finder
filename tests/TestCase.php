@@ -21,23 +21,23 @@ class TestCase extends Orchestra
     {
         return new class ($id, $quantity, $price) implements Subsetable {
             public function __construct(
-                public mixed $id,
-                public mixed $quantity,
+                public int|string $id,
+                public int $quantity,
                 public float|int $price
             ) {
             }
 
-            public function getId(): mixed
+            public function getId(): int|string
             {
                 return $this->id;
             }
 
-            public function getQuantity(): mixed
+            public function getQuantity(): int
             {
                 return $this->quantity;
             }
 
-            public function setQuantity($quantity): void
+            public function setQuantity(int $quantity): void
             {
                 $this->quantity = $quantity;
             }
@@ -57,23 +57,23 @@ class TestCase extends Orchestra
     {
         return new class ($name, $amount, $price) implements Subsetable {
             public function __construct(
-                public mixed $name,
-                public mixed $amount,
+                public int|string $name,
+                public int $amount,
                 public float|int $price
             ) {
             }
 
-            public function getId(): mixed
+            public function getId(): int|string
             {
                 return $this->name;
             }
 
-            public function getQuantity(): mixed
+            public function getQuantity(): int
             {
                 return $this->amount;
             }
 
-            public function setQuantity($amount): void
+            public function setQuantity(int $amount): void
             {
                 $this->amount = $amount;
             }

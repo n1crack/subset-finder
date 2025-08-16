@@ -4,9 +4,18 @@ namespace Ozdemir\SubsetFinder;
 
 interface Subsetable
 {
-    public function getId(): mixed;
+    /**
+     * Get the unique identifier for this item.
+     */
+    public function getId(): int|string;
 
-    public function getQuantity(): mixed;
+    /**
+     * Get the quantity of this item.
+     */
+    public function getQuantity(): int;
 
-    public function setQuantity($quantity): void;
+    /**
+     * Set the quantity of this item.
+     */
+    public function setQuantity(int $quantity): void;
 }
