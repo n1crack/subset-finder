@@ -3,8 +3,8 @@
 namespace Ozdemir\SubsetFinder;
 
 use Illuminate\Support\Collection;
-use Ozdemir\SubsetFinder\Exceptions\InvalidArgumentException;
 use Ozdemir\SubsetFinder\Exceptions\InsufficientQuantityException;
+use Ozdemir\SubsetFinder\Exceptions\InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -12,7 +12,7 @@ class SubsetFinder
 {
     private SubsetFinderConfig $config;
     private LoggerInterface $logger;
-    
+
     private Collection $flatCollection;
     private Collection $filteredFlatCollection;
     private Collection $foundSubsets;
@@ -38,7 +38,7 @@ class SubsetFinder
     ) {
         $this->config = $config ?? SubsetFinderConfig::default();
         $this->logger = $logger ?? new NullLogger();
-        
+
         $this->validateInput();
         $this->startTime = microtime(true);
         $this->startMemory = memory_get_usage(true);
@@ -85,8 +85,8 @@ class SubsetFinder
                 'id_field' => $this->config->idField,
                 'quantity_field' => $this->config->quantityField,
                 'sort_field' => $this->config->sortField,
-                'enable_lazy_evaluation' => $this->config->enableLazyEvaluation
-            ]
+                'enable_lazy_evaluation' => $this->config->enableLazyEvaluation,
+            ],
         ]);
 
         try {
@@ -94,13 +94,14 @@ class SubsetFinder
             $this->prepareCollection();
             $this->findSubsets();
             $this->calculateRemaining();
-            
+
             $this->logCompletion();
         } catch (\Exception $e) {
             $this->logger->error('Error during subset calculation', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
+
             throw $e;
         }
     }
@@ -153,7 +154,7 @@ class SubsetFinder
         $this->logger->info('Collection prepared', [
             'flat_collection_size' => $this->flatCollection->count(),
             'sort_field' => $this->config->sortField,
-            'sort_descending' => $this->config->sortDescending
+            'sort_descending' => $this->config->sortDescending,
         ]);
     }
 
@@ -193,7 +194,7 @@ class SubsetFinder
 
         $this->logger->info('Subsets found', [
             'found_subsets_count' => $this->foundSubsets->count(),
-            'total_items_found' => $this->foundSubsets->sum($this->config->quantityField)
+            'total_items_found' => $this->foundSubsets->sum($this->config->quantityField),
         ]);
     }
 
@@ -237,7 +238,7 @@ class SubsetFinder
 
         $this->logger->info('Remaining quantities calculated', [
             'remaining_items_count' => $this->remainingSubsets->count(),
-            'total_remaining_quantity' => $this->remainingSubsets->sum($this->config->quantityField)
+            'total_remaining_quantity' => $this->remainingSubsets->sum($this->config->quantityField),
         ]);
     }
 
@@ -265,7 +266,7 @@ class SubsetFinder
             'execution_time_ms' => round($executionTime * 1000, 2),
             'memory_peak_mb' => round($memoryPeak / 1024 / 1024, 2),
             'memory_increase_mb' => round($memoryIncrease / 1024 / 1024, 2),
-            'subset_quantity' => $this->subsetQuantity
+            'subset_quantity' => $this->subsetQuantity,
         ]);
     }
 
@@ -321,7 +322,7 @@ class SubsetFinder
             'collection_size' => $this->collection->count(),
             'subset_count' => $this->subsetCollection->count(),
             'found_subsets_count' => $this->foundSubsets->count(),
-            'remaining_items_count' => $this->remainingSubsets->count()
+            'remaining_items_count' => $this->remainingSubsets->count(),
         ];
     }
 
@@ -340,7 +341,7 @@ class SubsetFinder
     {
         $totalItems = $this->collection->sum($this->config->quantityField);
         $usedItems = $this->foundSubsets->sum($this->config->quantityField);
-        
+
         if ($totalItems === 0) {
             return 0.0;
         }

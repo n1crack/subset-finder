@@ -16,7 +16,7 @@ class SubsetCollection extends Collection
     public function __construct($items = [])
     {
         parent::__construct($items);
-        
+
         // Only validate the initial constructor call, not internal Laravel operations
         if (!empty($items) && $this->isInitialConstructorCall()) {
             $this->validateItems($items);
@@ -30,7 +30,7 @@ class SubsetCollection extends Collection
     private function isInitialConstructorCall(): bool
     {
         $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5);
-        
+
         // Look for calls that are not from Laravel's internal Collection methods
         foreach ($trace as $call) {
             if (isset($call['class']) && str_starts_with($call['class'], 'Illuminate\\Support\\Collection')) {
@@ -38,7 +38,7 @@ class SubsetCollection extends Collection
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -73,6 +73,7 @@ class SubsetCollection extends Collection
     public function addSubset(Subset $subset): self
     {
         $this->push($subset);
+
         return $this;
     }
 

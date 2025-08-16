@@ -12,7 +12,8 @@ class SubsetFinderConfig
         public readonly int $maxMemoryUsage = 128 * 1024 * 1024, // 128MB
         public readonly bool $enableLazyEvaluation = true,
         public readonly bool $enableLogging = false
-    ) {}
+    ) {
+    }
 
     /**
      * Create a default configuration.

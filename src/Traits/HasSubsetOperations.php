@@ -17,7 +17,7 @@ trait HasSubsetOperations
     {
         $subsetFinder = new SubsetFinder($this, $subsetCollection, $config);
         $subsetFinder->solve();
-        
+
         return $subsetFinder;
     }
 
@@ -42,7 +42,7 @@ trait HasSubsetOperations
     public function createSubsetCollection(array $criteria): SubsetCollection
     {
         $subsets = [];
-        
+
         foreach ($criteria as $item) {
             if (is_array($item) && isset($item['items']) && isset($item['quantity'])) {
                 $subsets[] = new Subset($item['items'], $item['quantity']);
@@ -50,7 +50,7 @@ trait HasSubsetOperations
                 $subsets[] = new Subset($item[0], $item[1]);
             }
         }
-        
+
         return new SubsetCollection($subsets);
     }
 
@@ -62,6 +62,7 @@ trait HasSubsetOperations
         try {
             $subsetFinder = new SubsetFinder($this, $subsetCollection);
             $subsetFinder->solve();
+
             return $subsetFinder->getSubsetQuantity() > 0;
         } catch (\Exception $e) {
             return false;
@@ -76,6 +77,7 @@ trait HasSubsetOperations
         try {
             $subsetFinder = new SubsetFinder($this, $subsetCollection);
             $subsetFinder->solve();
+
             return $subsetFinder->getSubsetQuantity();
         } catch (\Exception $e) {
             return 0;

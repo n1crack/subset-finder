@@ -11,7 +11,7 @@ use Ozdemir\SubsetFinder\SubsetFinderConfig;
  * @method static SubsetFinderClass withConfig(SubsetFinderConfig $config)
  * @method static SubsetFinderClass forLargeDatasets()
  * @method static SubsetFinderClass forPerformance()
- * 
+ *
  * @see \Ozdemir\SubsetFinder\SubsetFinder
  */
 class SubsetFinder extends Facade

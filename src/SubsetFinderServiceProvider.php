@@ -3,7 +3,6 @@
 namespace Ozdemir\SubsetFinder;
 
 use Illuminate\Support\ServiceProvider;
-use Ozdemir\SubsetFinder\Facades\SubsetFinder as SubsetFinderFacade;
 
 class SubsetFinderServiceProvider extends ServiceProvider
 {
@@ -12,7 +11,7 @@ class SubsetFinderServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton('subset-finder', function ($app) {
+        $this->app->singleton('subset-finder', function($app) {
             return new SubsetFinder(
                 collect(),
                 new SubsetCollection(),

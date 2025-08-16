@@ -20,7 +20,7 @@ class Subset
     {
         $this->validateItems($items);
         $this->validateQuantity($quantity);
-        
+
         $this->items = $items;
         $this->quantity = $quantity;
     }
