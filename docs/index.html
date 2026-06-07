@@ -244,7 +244,7 @@ Parts left in the bin:
   Oak Leg   x2
   Glass Top x8
   Screw A   x344
-</pre></div></section><section class="card" id="capacity"><h2>🎓 Selling coaching packages against available hours</h2><p class="question">How many coaching packages can we sell this month with the hours our tutors have left?</p><p class="sub">Quantities don't have to be things on a shelf — here they are <em>hours</em>, which split freely across packages. One package includes 10 senior hours and 20 junior hours, from any mix of tutors; sorting by hourly rate books the cheapest qualified hours first.</p><div class="code"><div class="code-head"><span></span><span></span><span></span><b>PHP</b></div><pre><code style="color: #9d4edd"><span style="color: #1c2433">
+</pre></div></section><section class="card" id="capacity"><h2>🎓 Selling coaching packages against available hours</h2><p class="question">How many coaching packages can we sell this month with the hours our tutors have left?</p><p class="sub">Quantities don't have to be things on a shelf — here they are <em>hours</em>, which split freely across packages. One package includes 10 senior hours and 20 junior hours, from any mix of tutors. Within each requirement the cheaper rate is booked first: Maya ($80) fills up before Tom ($90), Sam ($40) before Alex ($45).</p><div class="code"><div class="code-head"><span></span><span></span><span></span><b>PHP</b></div><pre><code style="color: #9d4edd"><span style="color: #1c2433">
 </span><span style="color: #1d4ed8">use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\Subset</span><span style="color: #1d4ed8">;
 use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\SubsetCollection</span><span style="color: #1d4ed8">;
 use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\SubsetFinder</span><span style="color: #1d4ed8">;
@@ -269,9 +269,9 @@ use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\SubsetFinderConfig<
 
 </span><span style="color: #1c2433">printf</span><span style="color: #1d4ed8">(</span><span style="color: #047857">"Packages we can sell this month: %d\n\n"</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$finder</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">getSubsetQuantity</span><span style="color: #1d4ed8">());
 
-echo </span><span style="color: #047857">"Hours booked (cheapest rate first):\n"</span><span style="color: #1d4ed8">;
+echo </span><span style="color: #047857">"Hours booked (cheaper rate fills first within each requirement):\n"</span><span style="color: #1d4ed8">;
 foreach (</span><span style="color: #1c2433">$finder</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">getFoundSubsets</span><span style="color: #1d4ed8">() as </span><span style="color: #1c2433">$tutor</span><span style="color: #1d4ed8">) {
-    </span><span style="color: #1c2433">printf</span><span style="color: #1d4ed8">(</span><span style="color: #047857">"  %-13s %3d hours\n"</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$tutor</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">name</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$tutor</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">);
+    </span><span style="color: #1c2433">printf</span><span style="color: #1d4ed8">(</span><span style="color: #047857">"  %-13s %3d hours @ \$%.0f/h\n"</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$tutor</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">name</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$tutor</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$tutor</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">);
 }
 
 echo </span><span style="color: #047857">"\nHours still free:\n"</span><span style="color: #1d4ed8">;
@@ -279,11 +279,11 @@ foreach (</span><span style="color: #1c2433">$finder</span><span style="color: #
     </span><span style="color: #1c2433">printf</span><span style="color: #1d4ed8">(</span><span style="color: #047857">"  %-13s %3d hours\n"</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$tutor</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">name</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$tutor</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">);
 }</span></code></pre></div><div class="out"><div class="out-head">OUTPUT</div><pre>Packages we can sell this month: 5
 
-Hours booked (cheapest rate first):
-  Maya (senior)  40 hours
-  Tom (senior)   10 hours
-  Sam (junior)   50 hours
-  Alex (junior)  50 hours
+Hours booked (cheaper rate fills first within each requirement):
+  Maya (senior)  40 hours @ $80/h
+  Tom (senior)   10 hours @ $90/h
+  Sam (junior)   50 hours @ $40/h
+  Alex (junior)  50 hours @ $45/h
 
 Hours still free:
   Tom (senior)   15 hours

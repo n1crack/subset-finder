@@ -184,8 +184,8 @@ PHP,
         'question' => 'How many coaching packages can we sell this month with the hours our tutors have left?',
         'desc' => 'Quantities don\'t have to be things on a shelf — here they are <em>hours</em>, '
             . 'which split freely across packages. One package includes 10 senior hours and 20 '
-            . 'junior hours, from any mix of tutors; sorting by hourly rate books the cheapest '
-            . 'qualified hours first.',
+            . 'junior hours, from any mix of tutors. Within each requirement the cheaper rate is '
+            . 'booked first: Maya ($80) fills up before Tom ($90), Sam ($40) before Alex ($45).',
         'code' => <<<'PHP'
 use Ozdemir\SubsetFinder\Subset;
 use Ozdemir\SubsetFinder\SubsetCollection;
@@ -211,9 +211,9 @@ $finder->solve();
 
 printf("Packages we can sell this month: %d\n\n", $finder->getSubsetQuantity());
 
-echo "Hours booked (cheapest rate first):\n";
+echo "Hours booked (cheaper rate fills first within each requirement):\n";
 foreach ($finder->getFoundSubsets() as $tutor) {
-    printf("  %-13s %3d hours\n", $tutor->name, $tutor->quantity);
+    printf("  %-13s %3d hours @ \$%.0f/h\n", $tutor->name, $tutor->quantity, $tutor->price);
 }
 
 echo "\nHours still free:\n";
