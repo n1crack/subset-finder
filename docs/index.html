@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SubsetFinder — PHP package for set building from quantity pools</title>
+<meta name="description" content="ozdemir/subset-finder: how many complete sets can you build from a pool of quantities? Cart promotions, gift boxes, assembly, staffing — with captured output.">
+<style>
+  :root {
+    --bg: #f6f7fb;
+    --card: #ffffff;
+    --ink: #1c2433;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --accent: #2563eb;
+    --term-bg: #16181d;
+    --term-ink: #d6e2f0;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 36px 20px 70px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  h1 { font-size: 28px; margin: 0; letter-spacing: -0.02em; }
+  h1 .dim { color: var(--muted); font-weight: 400; }
+  .links a { color: var(--accent); text-decoration: none; margin-left: 16px; font-size: 14px; }
+  .links a:hover { text-decoration: underline; }
+  .tagline { color: var(--muted); margin: 10px 0 24px; max-width: 72ch; }
+  nav.toc { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+  nav.toc a {
+    border: 1px solid var(--line); background: var(--card); color: var(--ink);
+    padding: 8px 14px; border-radius: 10px; font-size: 14px; text-decoration: none;
+  }
+  nav.toc a:hover { border-color: var(--accent); color: var(--accent); }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 22px; margin-bottom: 26px;
+  }
+  .card h2 { margin: 0 0 6px; font-size: 19px; }
+  .card .question { font-size: 15.5px; font-weight: 600; margin: 0 0 6px; }
+  .card .sub { color: var(--muted); font-size: 14.5px; margin: 0 0 16px; }
+  .card .sub code { font-family: var(--mono); font-size: 13px; background: var(--bg); border-radius: 5px; padding: 1px 5px; }
+
+  .code {
+    border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-bottom: 14px;
+    background: #fbfcfe;
+  }
+  .code-head {
+    display: flex; align-items: center; gap: 6px; padding: 8px 12px;
+    background: #f1f3f8; border-bottom: 1px solid var(--line);
+  }
+  .code-head span { width: 10px; height: 10px; border-radius: 50%; background: #d8dce5; }
+  .code-head b { margin-left: auto; font-size: 11px; color: var(--muted); letter-spacing: 0.08em; }
+  .code pre, .code code {
+    display: block; margin: 0; padding: 14px 16px; overflow-x: auto;
+    font-family: var(--mono); font-size: 13px; line-height: 1.6; white-space: pre;
+  }
+
+  .out { border-radius: 10px; overflow: hidden; border: 1px solid #0c0e12; }
+  .out-head {
+    background: #0c0e12; color: #8b96a5; font: 600 11px var(--mono);
+    letter-spacing: 0.12em; padding: 7px 14px;
+  }
+  .out pre {
+    margin: 0; padding: 14px 16px; background: var(--term-bg); color: var(--term-ink);
+    font-family: var(--mono); font-size: 13px; line-height: 1.6; overflow-x: auto;
+  }
+
+  footer { color: var(--muted); font-size: 13.5px; text-align: center; margin-top: 8px; }
+  footer code { font-family: var(--mono); background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>SubsetFinder <span class="dim">— use cases</span></h1>
+    <nav class="links">
+      <a href="https://github.com/n1crack/subset-finder">GitHub</a>
+      <a href="https://packagist.org/packages/ozdemir/subset-finder">Packagist</a>
+    </nav>
+  </header>
+  <p class="tagline">
+    A dependency-free PHP package that answers: <em>“how many complete sets can I build from a
+    pool of quantities, which items go into them, and what is left over?”</em>
+    Cart promotions, gift boxes, assembly lines, shift rosters — same question, same three lines of code.
+  </p>
+  <nav class="toc">
+    <a href="#promo">🛒 Cart promotion</a><a href="#giftbox">🎁 Gift box assembly</a><a href="#assembly">🏭 Assembly with substitutable parts</a><a href="#staffing">👥 Shift staffing</a><a href="#overlap">⚖️ Overlapping demands on shared stock</a>
+  </nav>
+  <section class="card" id="setup"><h2>Setup — your item class</h2><p class="sub">Collection items implement the small <code>Subsetable</code> interface. Property names are up to you; the solver only talks to the interface.</p><div class="code"><div class="code-head"><span></span><span></span><span></span><b>PHP</b></div><pre><code style="color: #9d4edd"><span style="color: #1c2433">
+</span><span style="color: #1d4ed8">use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\Subsetable</span><span style="color: #1d4ed8">;
+
+class </span><span style="color: #1c2433">Item </span><span style="color: #1d4ed8">implements </span><span style="color: #1c2433">Subsetable
+</span><span style="color: #1d4ed8">{
+    public function </span><span style="color: #1c2433">__construct</span><span style="color: #1d4ed8">(
+        public readonly </span><span style="color: #1c2433">int $id</span><span style="color: #1d4ed8">,
+        public readonly </span><span style="color: #1c2433">string $name</span><span style="color: #1d4ed8">,
+        public </span><span style="color: #1c2433">int $quantity</span><span style="color: #1d4ed8">,
+        public readonly </span><span style="color: #1c2433">float $price</span><span style="color: #1d4ed8">,
+    ) {
+    }
+
+    public function </span><span style="color: #1c2433">getId</span><span style="color: #1d4ed8">(): </span><span style="color: #1c2433">int
+    </span><span style="color: #1d4ed8">{
+        return </span><span style="color: #1c2433">$this</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">id</span><span style="color: #1d4ed8">;
+    }
+
+    public function </span><span style="color: #1c2433">getQuantity</span><span style="color: #1d4ed8">(): </span><span style="color: #1c2433">int
+    </span><span style="color: #1d4ed8">{
+        return </span><span style="color: #1c2433">$this</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">;
+    }
+
+    public function </span><span style="color: #1c2433">setQuantity</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">int $quantity</span><span style="color: #1d4ed8">): </span><span style="color: #1c2433">void
+    </span><span style="color: #1d4ed8">{
+        </span><span style="color: #1c2433">$this</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">quantity </span><span style="color: #1d4ed8">= </span><span style="color: #1c2433">$quantity</span><span style="color: #1d4ed8">;
+    }
+}</span></code></pre></div></section><section class="card" id="promo"><h2>🛒 Cart promotion</h2><p class="question">How many times does “any 5 drinks + any 2 snacks” apply to this cart — and which items does it capture?</p><p class="sub">The classic cart-discount problem. The promo set is flexible (“any of these”), so the solver picks which units fall under the promo — cheapest first, thanks to <code>sortField: 'price'</code> — and tells you exactly what stays at full price.</p><div class="code"><div class="code-head"><span></span><span></span><span></span><b>PHP</b></div><pre><code style="color: #9d4edd"><span style="color: #1c2433">
+</span><span style="color: #1d4ed8">use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\Subset</span><span style="color: #1d4ed8">;
+use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\SubsetCollection</span><span style="color: #1d4ed8">;
+use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\SubsetFinder</span><span style="color: #1d4ed8">;
+use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\SubsetFinderConfig</span><span style="color: #1d4ed8">;
+
+</span><span style="color: #1c2433">$cart </span><span style="color: #1d4ed8">= [
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">1</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Latte'</span><span style="color: #1d4ed8">,     </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">7</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">4.50</span><span style="color: #1d4ed8">),
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">2</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Espresso'</span><span style="color: #1d4ed8">,  </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">4</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">3.00</span><span style="color: #1d4ed8">),
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">3</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Croissant'</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">5</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">3.75</span><span style="color: #1d4ed8">),
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">4</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Brownie'</span><span style="color: #1d4ed8">,   </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">3</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">4.25</span><span style="color: #1d4ed8">),
+];
+
+</span><span style="color: #1c2433">$promo </span><span style="color: #1d4ed8">= new </span><span style="color: #1c2433">SubsetCollection</span><span style="color: #1d4ed8">([
+    </span><span style="color: #1c2433">Subset</span><span style="color: #1d4ed8">::</span><span style="color: #1c2433">of</span><span style="color: #1d4ed8">([</span><span style="color: #1c2433">1</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">2</span><span style="color: #1d4ed8">])-&gt;</span><span style="color: #1c2433">take</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">5</span><span style="color: #1d4ed8">), </span><span style="color: #8a919e">// any 5 drinks
+    </span><span style="color: #1c2433">Subset</span><span style="color: #1d4ed8">::</span><span style="color: #1c2433">of</span><span style="color: #1d4ed8">([</span><span style="color: #1c2433">3</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">4</span><span style="color: #1d4ed8">])-&gt;</span><span style="color: #1c2433">take</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">2</span><span style="color: #1d4ed8">), </span><span style="color: #8a919e">// any 2 snacks
+</span><span style="color: #1d4ed8">]);
+
+</span><span style="color: #1c2433">$finder </span><span style="color: #1d4ed8">= new </span><span style="color: #1c2433">SubsetFinder</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">$cart</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$promo</span><span style="color: #1d4ed8">, new </span><span style="color: #1c2433">SubsetFinderConfig</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">sortField</span><span style="color: #1d4ed8">: </span><span style="color: #047857">'price'</span><span style="color: #1d4ed8">));
+</span><span style="color: #1c2433">$finder</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">solve</span><span style="color: #1d4ed8">();
+
+</span><span style="color: #1c2433">printf</span><span style="color: #1d4ed8">(</span><span style="color: #047857">"Promo applies %d times.\n\n"</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$finder</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">getSubsetQuantity</span><span style="color: #1d4ed8">());
+
+echo </span><span style="color: #047857">"Discounted (cheapest first):\n"</span><span style="color: #1d4ed8">;
+foreach (</span><span style="color: #1c2433">$finder</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">getFoundSubsets</span><span style="color: #1d4ed8">() as </span><span style="color: #1c2433">$item</span><span style="color: #1d4ed8">) {
+    </span><span style="color: #1c2433">printf</span><span style="color: #1d4ed8">(</span><span style="color: #047857">"  %-9s x%d\n"</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$item</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">name</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$item</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">);
+}
+
+echo </span><span style="color: #047857">"\nFull price:\n"</span><span style="color: #1d4ed8">;
+foreach (</span><span style="color: #1c2433">$finder</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">getRemaining</span><span style="color: #1d4ed8">() as </span><span style="color: #1c2433">$item</span><span style="color: #1d4ed8">) {
+    </span><span style="color: #1c2433">printf</span><span style="color: #1d4ed8">(</span><span style="color: #047857">"  %-9s x%d\n"</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$item</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">name</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$item</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">);
+}</span></code></pre></div><div class="out"><div class="out-head">OUTPUT</div><pre>Promo applies 2 times.
+
+Discounted (cheapest first):
+  Espresso  x4
+  Latte     x6
+  Croissant x4
+
+Full price:
+  Latte     x1
+  Croissant x1
+  Brownie   x3
+</pre></div></section><section class="card" id="giftbox"><h2>🎁 Gift box assembly</h2><p class="question">How many complete gift boxes can we assemble from current stock — and which ingredient runs out first?</p><p class="sub">A box needs 2 candles, 3 soaps and a card — any variant of each. The answer tells you how many boxes to promise; the leftovers tell you what to restock (here the cards are the bottleneck, not the soaps).</p><div class="code"><div class="code-head"><span></span><span></span><span></span><b>PHP</b></div><pre><code style="color: #9d4edd"><span style="color: #1c2433">
+</span><span style="color: #1d4ed8">use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\Subset</span><span style="color: #1d4ed8">;
+use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\SubsetCollection</span><span style="color: #1d4ed8">;
+use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\SubsetFinder</span><span style="color: #1d4ed8">;
+
+</span><span style="color: #1c2433">$stock </span><span style="color: #1d4ed8">= [
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">1</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Vanilla Candle'</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">40</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">12.00</span><span style="color: #1d4ed8">),
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">2</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Pine Candle'</span><span style="color: #1d4ed8">,    </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">25</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">14.00</span><span style="color: #1d4ed8">),
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">3</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Lavender Soap'</span><span style="color: #1d4ed8">,  </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">80</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">6.50</span><span style="color: #1d4ed8">),
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">4</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Honey Soap'</span><span style="color: #1d4ed8">,     </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">60</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">7.00</span><span style="color: #1d4ed8">),
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">5</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Greeting Card'</span><span style="color: #1d4ed8">,  </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">30</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">2.50</span><span style="color: #1d4ed8">),
+];
+
+</span><span style="color: #1c2433">$giftBox </span><span style="color: #1d4ed8">= new </span><span style="color: #1c2433">SubsetCollection</span><span style="color: #1d4ed8">([
+    </span><span style="color: #1c2433">Subset</span><span style="color: #1d4ed8">::</span><span style="color: #1c2433">of</span><span style="color: #1d4ed8">([</span><span style="color: #1c2433">1</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">2</span><span style="color: #1d4ed8">])-&gt;</span><span style="color: #1c2433">take</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">2</span><span style="color: #1d4ed8">), </span><span style="color: #8a919e">// 2 candles, either scent
+    </span><span style="color: #1c2433">Subset</span><span style="color: #1d4ed8">::</span><span style="color: #1c2433">of</span><span style="color: #1d4ed8">([</span><span style="color: #1c2433">3</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">4</span><span style="color: #1d4ed8">])-&gt;</span><span style="color: #1c2433">take</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">3</span><span style="color: #1d4ed8">), </span><span style="color: #8a919e">// 3 soaps, either kind
+    </span><span style="color: #1c2433">Subset</span><span style="color: #1d4ed8">::</span><span style="color: #1c2433">of</span><span style="color: #1d4ed8">([</span><span style="color: #1c2433">5</span><span style="color: #1d4ed8">])-&gt;</span><span style="color: #1c2433">take</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">1</span><span style="color: #1d4ed8">),    </span><span style="color: #8a919e">// 1 card
+</span><span style="color: #1d4ed8">]);
+
+</span><span style="color: #1c2433">$finder </span><span style="color: #1d4ed8">= new </span><span style="color: #1c2433">SubsetFinder</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">$stock</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$giftBox</span><span style="color: #1d4ed8">);
+</span><span style="color: #1c2433">$finder</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">solve</span><span style="color: #1d4ed8">();
+
+</span><span style="color: #1c2433">printf</span><span style="color: #1d4ed8">(</span><span style="color: #047857">"Complete gift boxes: %d\n\n"</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$finder</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">getSubsetQuantity</span><span style="color: #1d4ed8">());
+
+echo </span><span style="color: #047857">"Still on the shelf:\n"</span><span style="color: #1d4ed8">;
+foreach (</span><span style="color: #1c2433">$finder</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">getRemaining</span><span style="color: #1d4ed8">() as </span><span style="color: #1c2433">$item</span><span style="color: #1d4ed8">) {
+    </span><span style="color: #1c2433">printf</span><span style="color: #1d4ed8">(</span><span style="color: #047857">"  %-15s %3d left\n"</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$item</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">name</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$item</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">);
+}
+
+echo </span><span style="color: #047857">"\n=&gt; Greeting cards are the bottleneck - restock those first.\n"</span><span style="color: #1d4ed8">;</span></code></pre></div><div class="out"><div class="out-head">OUTPUT</div><pre>Complete gift boxes: 30
+
+Still on the shelf:
+  Pine Candle       5 left
+  Honey Soap       50 left
+
+=&gt; Greeting cards are the bottleneck - restock those first.
+</pre></div></section><section class="card" id="assembly"><h2>🏭 Assembly with substitutable parts</h2><p class="question">How many desks can we build when several parts are interchangeable?</p><p class="sub">A desk needs 4 legs, a top and 8 screws — but oak or steel legs both work, and either screw type fits. Classic BOM math breaks down with substitutable parts; here each requirement is simply a subset over the alternatives.</p><div class="code"><div class="code-head"><span></span><span></span><span></span><b>PHP</b></div><pre><code style="color: #9d4edd"><span style="color: #1c2433">
+</span><span style="color: #1d4ed8">use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\Subset</span><span style="color: #1d4ed8">;
+use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\SubsetCollection</span><span style="color: #1d4ed8">;
+use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\SubsetFinder</span><span style="color: #1d4ed8">;
+use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\SubsetFinderConfig</span><span style="color: #1d4ed8">;
+
+</span><span style="color: #1c2433">$parts </span><span style="color: #1d4ed8">= [
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">1</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Oak Leg'</span><span style="color: #1d4ed8">,   </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">90</span><span style="color: #1d4ed8">,  </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">18.00</span><span style="color: #1d4ed8">),
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">2</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Steel Leg'</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">60</span><span style="color: #1d4ed8">,  </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">12.00</span><span style="color: #1d4ed8">),
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">3</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Oak Top'</span><span style="color: #1d4ed8">,   </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">35</span><span style="color: #1d4ed8">,  </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">80.00</span><span style="color: #1d4ed8">),
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">4</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Glass Top'</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">10</span><span style="color: #1d4ed8">,  </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">95.00</span><span style="color: #1d4ed8">),
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">5</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Screw A'</span><span style="color: #1d4ed8">,   </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">500</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">0.10</span><span style="color: #1d4ed8">),
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">6</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Screw B'</span><span style="color: #1d4ed8">,   </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">140</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">0.08</span><span style="color: #1d4ed8">),
+];
+
+</span><span style="color: #1c2433">$desk </span><span style="color: #1d4ed8">= new </span><span style="color: #1c2433">SubsetCollection</span><span style="color: #1d4ed8">([
+    </span><span style="color: #1c2433">Subset</span><span style="color: #1d4ed8">::</span><span style="color: #1c2433">of</span><span style="color: #1d4ed8">([</span><span style="color: #1c2433">1</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">2</span><span style="color: #1d4ed8">])-&gt;</span><span style="color: #1c2433">take</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">4</span><span style="color: #1d4ed8">), </span><span style="color: #8a919e">// any 4 legs
+    </span><span style="color: #1c2433">Subset</span><span style="color: #1d4ed8">::</span><span style="color: #1c2433">of</span><span style="color: #1d4ed8">([</span><span style="color: #1c2433">3</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">4</span><span style="color: #1d4ed8">])-&gt;</span><span style="color: #1c2433">take</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">1</span><span style="color: #1d4ed8">), </span><span style="color: #8a919e">// any top
+    </span><span style="color: #1c2433">Subset</span><span style="color: #1d4ed8">::</span><span style="color: #1c2433">of</span><span style="color: #1d4ed8">([</span><span style="color: #1c2433">5</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">6</span><span style="color: #1d4ed8">])-&gt;</span><span style="color: #1c2433">take</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">8</span><span style="color: #1d4ed8">), </span><span style="color: #8a919e">// any 8 screws
+</span><span style="color: #1d4ed8">]);
+
+</span><span style="color: #8a919e">// Cheapest parts are consumed first
+</span><span style="color: #1c2433">$finder </span><span style="color: #1d4ed8">= new </span><span style="color: #1c2433">SubsetFinder</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">$parts</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$desk</span><span style="color: #1d4ed8">, new </span><span style="color: #1c2433">SubsetFinderConfig</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">sortField</span><span style="color: #1d4ed8">: </span><span style="color: #047857">'price'</span><span style="color: #1d4ed8">));
+</span><span style="color: #1c2433">$finder</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">solve</span><span style="color: #1d4ed8">();
+
+</span><span style="color: #1c2433">printf</span><span style="color: #1d4ed8">(</span><span style="color: #047857">"Desks we can build: %d\n\n"</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$finder</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">getSubsetQuantity</span><span style="color: #1d4ed8">());
+
+echo </span><span style="color: #047857">"Parts consumed:\n"</span><span style="color: #1d4ed8">;
+foreach (</span><span style="color: #1c2433">$finder</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">getFoundSubsets</span><span style="color: #1d4ed8">() as </span><span style="color: #1c2433">$part</span><span style="color: #1d4ed8">) {
+    </span><span style="color: #1c2433">printf</span><span style="color: #1d4ed8">(</span><span style="color: #047857">"  %-9s x%d\n"</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$part</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">name</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$part</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">);
+}
+
+echo </span><span style="color: #047857">"\nParts left in the bin:\n"</span><span style="color: #1d4ed8">;
+foreach (</span><span style="color: #1c2433">$finder</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">getRemaining</span><span style="color: #1d4ed8">() as </span><span style="color: #1c2433">$part</span><span style="color: #1d4ed8">) {
+    </span><span style="color: #1c2433">printf</span><span style="color: #1d4ed8">(</span><span style="color: #047857">"  %-9s x%d\n"</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$part</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">name</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$part</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">);
+}</span></code></pre></div><div class="out"><div class="out-head">OUTPUT</div><pre>Desks we can build: 37
+
+Parts consumed:
+  Steel Leg x60
+  Oak Leg   x88
+  Oak Top   x35
+  Glass Top x2
+  Screw B   x140
+  Screw A   x156
+
+Parts left in the bin:
+  Oak Leg   x2
+  Glass Top x8
+  Screw A   x344
+</pre></div></section><section class="card" id="staffing"><h2>👥 Shift staffing</h2><p class="question">How many fully staffed shifts can we run this week with the hours people have available?</p><p class="sub">Quantities don't have to be things on a shelf. Here each person's quantity is the number of shifts they can take this week; every shift needs 2 senior slots and 4 support slots. Sorting by cost fills shifts with the cheapest available people first.</p><div class="code"><div class="code-head"><span></span><span></span><span></span><b>PHP</b></div><pre><code style="color: #9d4edd"><span style="color: #1c2433">
+</span><span style="color: #1d4ed8">use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\Subset</span><span style="color: #1d4ed8">;
+use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\SubsetCollection</span><span style="color: #1d4ed8">;
+use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\SubsetFinder</span><span style="color: #1d4ed8">;
+use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\SubsetFinderConfig</span><span style="color: #1d4ed8">;
+
+</span><span style="color: #8a919e">// quantity = shifts this person can take this week, price = cost per shift
+</span><span style="color: #1c2433">$team </span><span style="color: #1d4ed8">= [
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">1</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Maya (senior)'</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">5</span><span style="color: #1d4ed8">,  </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">320.0</span><span style="color: #1d4ed8">),
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">2</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Tom (senior)'</span><span style="color: #1d4ed8">,  </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">4</span><span style="color: #1d4ed8">,  </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">340.0</span><span style="color: #1d4ed8">),
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">3</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Alex (mid)'</span><span style="color: #1d4ed8">,    </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">6</span><span style="color: #1d4ed8">,  </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">240.0</span><span style="color: #1d4ed8">),
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">4</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Sam (mid)'</span><span style="color: #1d4ed8">,     </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">6</span><span style="color: #1d4ed8">,  </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">230.0</span><span style="color: #1d4ed8">),
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">5</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Kim (junior)'</span><span style="color: #1d4ed8">,  </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">10</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">180.0</span><span style="color: #1d4ed8">),
+];
+
+</span><span style="color: #1c2433">$shift </span><span style="color: #1d4ed8">= new </span><span style="color: #1c2433">SubsetCollection</span><span style="color: #1d4ed8">([
+    </span><span style="color: #1c2433">Subset</span><span style="color: #1d4ed8">::</span><span style="color: #1c2433">of</span><span style="color: #1d4ed8">([</span><span style="color: #1c2433">1</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">2</span><span style="color: #1d4ed8">])-&gt;</span><span style="color: #1c2433">take</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">2</span><span style="color: #1d4ed8">),    </span><span style="color: #8a919e">// 2 senior slots per shift
+    </span><span style="color: #1c2433">Subset</span><span style="color: #1d4ed8">::</span><span style="color: #1c2433">of</span><span style="color: #1d4ed8">([</span><span style="color: #1c2433">3</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">4</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">5</span><span style="color: #1d4ed8">])-&gt;</span><span style="color: #1c2433">take</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">4</span><span style="color: #1d4ed8">), </span><span style="color: #8a919e">// 4 support slots per shift
+</span><span style="color: #1d4ed8">]);
+
+</span><span style="color: #1c2433">$finder </span><span style="color: #1d4ed8">= new </span><span style="color: #1c2433">SubsetFinder</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">$team</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$shift</span><span style="color: #1d4ed8">, new </span><span style="color: #1c2433">SubsetFinderConfig</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">sortField</span><span style="color: #1d4ed8">: </span><span style="color: #047857">'price'</span><span style="color: #1d4ed8">));
+</span><span style="color: #1c2433">$finder</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">solve</span><span style="color: #1d4ed8">();
+
+</span><span style="color: #1c2433">printf</span><span style="color: #1d4ed8">(</span><span style="color: #047857">"Fully staffed shifts this week: %d\n\n"</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$finder</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">getSubsetQuantity</span><span style="color: #1d4ed8">());
+
+echo </span><span style="color: #047857">"Roster (cheapest first):\n"</span><span style="color: #1d4ed8">;
+foreach (</span><span style="color: #1c2433">$finder</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">getFoundSubsets</span><span style="color: #1d4ed8">() as </span><span style="color: #1c2433">$person</span><span style="color: #1d4ed8">) {
+    </span><span style="color: #1c2433">printf</span><span style="color: #1d4ed8">(</span><span style="color: #047857">"  %-13s %2d shifts\n"</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$person</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">name</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$person</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">);
+}
+
+echo </span><span style="color: #047857">"\nSpare capacity:\n"</span><span style="color: #1d4ed8">;
+foreach (</span><span style="color: #1c2433">$finder</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">getRemaining</span><span style="color: #1d4ed8">() as </span><span style="color: #1c2433">$person</span><span style="color: #1d4ed8">) {
+    </span><span style="color: #1c2433">printf</span><span style="color: #1d4ed8">(</span><span style="color: #047857">"  %-13s %2d shifts free\n"</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$person</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">name</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$person</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">);
+}</span></code></pre></div><div class="out"><div class="out-head">OUTPUT</div><pre>Fully staffed shifts this week: 4
+
+Roster (cheapest first):
+  Maya (senior)  5 shifts
+  Tom (senior)   3 shifts
+  Kim (junior)  10 shifts
+  Sam (mid)      6 shifts
+
+Spare capacity:
+  Tom (senior)   1 shifts free
+  Alex (mid)     6 shifts free
+</pre></div></section><section class="card" id="overlap"><h2>⚖️ Overlapping demands on shared stock</h2><p class="question">Two recurring orders compete for the same product — how many rounds of both can we actually ship?</p><p class="sub">Order Alpha accepts either widget; Order Beta insists on the Pro. Checking each order against the stock <em>independently</em> counts the shared Pro units twice and promises rounds you cannot ship. The solver allocates everything from one shared pool.</p><div class="code"><div class="code-head"><span></span><span></span><span></span><b>PHP</b></div><pre><code style="color: #9d4edd"><span style="color: #1c2433">
+</span><span style="color: #1d4ed8">use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\Subset</span><span style="color: #1d4ed8">;
+use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\SubsetCollection</span><span style="color: #1d4ed8">;
+use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\SubsetFinder</span><span style="color: #1d4ed8">;
+use </span><span style="color: #1c2433">Ozdemir\SubsetFinder\SubsetFinderConfig</span><span style="color: #1d4ed8">;
+
+</span><span style="color: #1c2433">$stock </span><span style="color: #1d4ed8">= [
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">1</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Widget Pro'</span><span style="color: #1d4ed8">,  </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">100</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">8.00</span><span style="color: #1d4ed8">),
+    new </span><span style="color: #1c2433">Item</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">2</span><span style="color: #1d4ed8">, </span><span style="color: #047857">'Widget Lite'</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">50</span><span style="color: #1d4ed8">,  </span><span style="color: #1c2433">price</span><span style="color: #1d4ed8">: </span><span style="color: #1c2433">3.00</span><span style="color: #1d4ed8">),
+];
+
+</span><span style="color: #1c2433">$orders </span><span style="color: #1d4ed8">= [
+    </span><span style="color: #1c2433">Subset</span><span style="color: #1d4ed8">::</span><span style="color: #1c2433">of</span><span style="color: #1d4ed8">([</span><span style="color: #1c2433">1</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">2</span><span style="color: #1d4ed8">])-&gt;</span><span style="color: #1c2433">take</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">10</span><span style="color: #1d4ed8">), </span><span style="color: #8a919e">// Order Alpha: 10 of either widget per round
+    </span><span style="color: #1c2433">Subset</span><span style="color: #1d4ed8">::</span><span style="color: #1c2433">of</span><span style="color: #1d4ed8">([</span><span style="color: #1c2433">1</span><span style="color: #1d4ed8">])-&gt;</span><span style="color: #1c2433">take</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">10</span><span style="color: #1d4ed8">),    </span><span style="color: #8a919e">// Order Beta: 10 Widget Pro per round
+</span><span style="color: #1d4ed8">];
+
+</span><span style="color: #8a919e">// The naive estimate: each order checked against the pool on its own.
+</span><span style="color: #1c2433">$naive </span><span style="color: #1d4ed8">= </span><span style="color: #1c2433">PHP_INT_MAX</span><span style="color: #1d4ed8">;
+foreach (</span><span style="color: #1c2433">$orders </span><span style="color: #1d4ed8">as </span><span style="color: #1c2433">$order</span><span style="color: #1d4ed8">) {
+    </span><span style="color: #1c2433">$supply </span><span style="color: #1d4ed8">= </span><span style="color: #1c2433">0</span><span style="color: #1d4ed8">;
+    foreach (</span><span style="color: #1c2433">$stock </span><span style="color: #1d4ed8">as </span><span style="color: #1c2433">$item</span><span style="color: #1d4ed8">) {
+        if (</span><span style="color: #1c2433">in_array</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">$item</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">getId</span><span style="color: #1d4ed8">(), </span><span style="color: #1c2433">$order</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">items</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">true</span><span style="color: #1d4ed8">)) {
+            </span><span style="color: #1c2433">$supply </span><span style="color: #1d4ed8">+= </span><span style="color: #1c2433">$item</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">getQuantity</span><span style="color: #1d4ed8">();
+        }
+    }
+    </span><span style="color: #1c2433">$naive </span><span style="color: #1d4ed8">= </span><span style="color: #1c2433">min</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">$naive</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">intdiv</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">$supply</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$order</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">));
+}
+
+</span><span style="color: #1c2433">$finder </span><span style="color: #1d4ed8">= new </span><span style="color: #1c2433">SubsetFinder</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">$stock</span><span style="color: #1d4ed8">, new </span><span style="color: #1c2433">SubsetCollection</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">$orders</span><span style="color: #1d4ed8">), new </span><span style="color: #1c2433">SubsetFinderConfig</span><span style="color: #1d4ed8">(</span><span style="color: #1c2433">sortField</span><span style="color: #1d4ed8">: </span><span style="color: #047857">'price'</span><span style="color: #1d4ed8">));
+</span><span style="color: #1c2433">$finder</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">solve</span><span style="color: #1d4ed8">();
+
+</span><span style="color: #1c2433">printf</span><span style="color: #1d4ed8">(</span><span style="color: #047857">"Naive estimate     : %2d rounds  (double counts the shared Pro stock)\n"</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$naive</span><span style="color: #1d4ed8">);
+</span><span style="color: #1c2433">printf</span><span style="color: #1d4ed8">(</span><span style="color: #047857">"Shared-pool answer : %2d rounds  (what you can actually ship)\n\n"</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$finder</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">getSubsetQuantity</span><span style="color: #1d4ed8">());
+
+foreach (</span><span style="color: #1c2433">$finder</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">getFoundSubsets</span><span style="color: #1d4ed8">() as </span><span style="color: #1c2433">$item</span><span style="color: #1d4ed8">) {
+    </span><span style="color: #1c2433">printf</span><span style="color: #1d4ed8">(</span><span style="color: #047857">"  %-12s %3d used\n"</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$item</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">name</span><span style="color: #1d4ed8">, </span><span style="color: #1c2433">$item</span><span style="color: #1d4ed8">-&gt;</span><span style="color: #1c2433">quantity</span><span style="color: #1d4ed8">);
+}</span></code></pre></div><div class="out"><div class="out-head">OUTPUT</div><pre>Naive estimate     : 10 rounds  (double counts the shared Pro stock)
+Shared-pool answer :  7 rounds  (what you can actually ship)
+
+  Widget Lite   50 used
+  Widget Pro    90 used
+</pre></div></section>
+  <footer>
+    <p><code>composer require ozdemir/subset-finder</code></p>
+    <p>Outputs on this page are captured from these snippets — regenerate with <code>php docs/build.php</code> · MIT licensed</p>
+  </footer>
+</div>
+</body>
+</html>
