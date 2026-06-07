@@ -4,7 +4,7 @@
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/n1crack/subset-finder/run-tests.yml)](https://github.com/n1crack/subset-finder/actions)
 [![GitHub](https://github.com/n1crack/subset-finder/blob/main/LICENSE.md)](https://github.com/n1crack/subset-finder/blob/main/LICENSE.md)
 
-A PHP package for finding subsets within collections based on quantity criteria. Built on Laravel collections.
+A dependency-free PHP package for finding subsets within collections based on quantity criteria.
 
 Given a pool of items with quantities, it answers: *"How many complete sets can I build, which items go into them, and what is left over?"* — useful for bundle pricing, cart discounts ("buy 5 of X and 2 of Y"), and inventory allocation.
 
@@ -14,7 +14,7 @@ Given a pool of items with quantities, it answers: *"How many complete sets can 
 - **Overlap aware**: subsets sharing the same item ids draw from a shared pool and are never double counted
 - **Flexible ordering**: allocate cheapest (or any sort order) items first
 - **Type safe**: PHP 8.1+, strict `Subsetable` interface
-- **Lightweight**: depends only on `illuminate/collections`
+- **Zero dependencies**: plain PHP; accepts arrays or any iterable (including Laravel collections)
 
 ## Installation
 
@@ -30,12 +30,13 @@ use Ozdemir\SubsetFinder\SubsetCollection;
 use Ozdemir\SubsetFinder\SubsetFinder;
 use Ozdemir\SubsetFinder\SubsetFinderConfig;
 
-// Define your collection and subset criteria
-$collection = collect([
+// Define your collection and subset criteria.
+// Any iterable works: a plain array, a generator, or a Laravel collection.
+$collection = [
     new Product(id: 1, quantity: 11, price: 15),
     new Product(id: 2, quantity: 6, price: 5),
     new Product(id: 3, quantity: 6, price: 5),
-]);
+];
 
 $subsetCollection = new SubsetCollection([
     Subset::of([1, 2])->take(5), // Each set needs 5 items from products 1 and 2
@@ -49,8 +50,8 @@ $subsetFinder = new SubsetFinder($collection, $subsetCollection, $config);
 $subsetFinder->solve();
 
 $subsetFinder->getSubsetQuantity(); // Max number of complete sets
-$subsetFinder->getFoundSubsets();   // Items used per id (Collection<Subsetable>)
-$subsetFinder->getRemaining();      // Leftover quantities (Collection<Subsetable>)
+$subsetFinder->getFoundSubsets();   // Items used per id (Subsetable[])
+$subsetFinder->getRemaining();      // Leftover quantities (Subsetable[])
 ```
 
 ### The Subsetable interface
@@ -98,6 +99,8 @@ $config = new SubsetFinderConfig(
 ```
 
 ### Using the Trait
+
+Add subset operations to any iterable collection class of your own — for example a Laravel collection:
 
 ```php
 use Illuminate\Support\Collection;

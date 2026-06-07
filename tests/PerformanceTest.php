@@ -53,10 +53,10 @@ class PerformanceTest extends TestCase
      */
     public function test_huge_quantities_solve_fast(): void
     {
-        $collection = collect([
+        $collection = [
             $this->mockSubsetable(1, 2_000_000_000, 10),
             $this->mockSubsetable(2, 1_000_000_000, 20),
-        ]);
+        ];
 
         $subsetCollection = new SubsetCollection([
             Subset::of([1, 2])->take(7),
@@ -155,16 +155,16 @@ class PerformanceTest extends TestCase
     /**
      * Create a large collection for testing
      */
-    private function createLargeCollection(int $size): \Illuminate\Support\Collection
+    private function createLargeCollection(int $size): array
     {
-        $collection = collect();
+        $collection = [];
 
         for ($i = 1; $i <= $size; $i++) {
-            $collection->push($this->mockSubsetable(
+            $collection[] = $this->mockSubsetable(
                 $i,
                 rand(10, 1000),
                 rand(1000, 10000) / 100
-            ));
+            );
         }
 
         return $collection;

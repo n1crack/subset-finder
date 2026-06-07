@@ -2,7 +2,6 @@
 
 namespace Ozdemir\SubsetFinder;
 
-use Illuminate\Support\Collection;
 use Ozdemir\SubsetFinder\Exceptions\InsufficientQuantityException;
 use Ozdemir\SubsetFinder\Exceptions\InvalidArgumentException;
 
@@ -10,8 +9,11 @@ class SubsetFinder
 {
     private SubsetFinderConfig $config;
 
-    /** @var Collection<int, Subsetable> Eligible items in sort order */
-    private Collection $sortedItems;
+    /** @var Subsetable[] Items in input order */
+    private array $items;
+
+    /** @var Subsetable[] Eligible items in sort order */
+    private array $sortedItems = [];
 
     /** @var array<int|string, int> Available quantity per item id */
     private array $availability = [];
@@ -22,26 +24,26 @@ class SubsetFinder
     /** @var array<int|string, Subsetable> First item per id, used to build result objects */
     private array $itemsById = [];
 
-    private Collection $foundSubsets;
-    private Collection $remainingSubsets;
+    /** @var Subsetable[] */
+    private array $foundSubsets = [];
+
+    /** @var Subsetable[] */
+    private array $remainingSubsets = [];
+
     private int $subsetQuantity = 0;
     private float $executionTime = 0.0;
 
     /**
-     * @param Collection $collection
-     * @param SubsetCollection $subsetCollection
-     * @param SubsetFinderConfig|null $config
+     * @param iterable<Subsetable> $collection Items to draw from; arrays and any Traversable (e.g. Laravel collections) are accepted.
      * @throws InvalidArgumentException
      */
     public function __construct(
-        private Collection $collection,
+        iterable $collection,
         private SubsetCollection $subsetCollection,
         ?SubsetFinderConfig $config = null
     ) {
+        $this->items = is_array($collection) ? array_values($collection) : iterator_to_array($collection, false);
         $this->config = $config ?? SubsetFinderConfig::default();
-        $this->foundSubsets = collect();
-        $this->remainingSubsets = collect();
-        $this->sortedItems = collect();
 
         $this->validateInput();
     }
@@ -53,7 +55,7 @@ class SubsetFinder
      */
     private function validateInput(): void
     {
-        if ($this->collection->isEmpty()) {
+        if ($this->items === []) {
             throw new InvalidArgumentException('Collection cannot be empty');
         }
 
@@ -61,12 +63,10 @@ class SubsetFinder
             throw new InvalidArgumentException('Subset collection cannot be empty');
         }
 
-        if ($this->collection->contains(fn($item) => !$item instanceof Subsetable)) {
-            throw new InvalidArgumentException('All collection items must implement Subsetable interface');
-        }
-
-        if ($this->subsetCollection->contains(fn($subset) => !$subset instanceof Subset)) {
-            throw new InvalidArgumentException('All subset collection items must be Subset instances');
+        foreach ($this->items as $item) {
+            if (!$item instanceof Subsetable) {
+                throw new InvalidArgumentException('All collection items must implement Subsetable interface');
+            }
         }
     }
 
@@ -110,12 +110,17 @@ class SubsetFinder
      */
     private function prepare(): void
     {
-        $eligibleIds = array_fill_keys($this->subsetCollection->getAllItemIds()->all(), true);
+        $eligibleIds = array_fill_keys($this->subsetCollection->getAllItemIds(), true);
 
-        $this->sortedItems = $this->collection
-            ->sortBy($this->config->sortField, SORT_REGULAR, $this->config->sortDescending)
-            ->filter(fn(Subsetable $item) => isset($eligibleIds[$item->getId()]))
-            ->values();
+        $field = $this->config->sortField;
+        $direction = $this->config->sortDescending ? -1 : 1;
+
+        $sorted = $this->items;
+        usort($sorted, fn(Subsetable $a, Subsetable $b) => $direction * (($a->{$field} ?? null) <=> ($b->{$field} ?? null)));
+
+        $this->sortedItems = array_values(
+            array_filter($sorted, fn(Subsetable $item) => isset($eligibleIds[$item->getId()]))
+        );
 
         $this->availability = [];
         $this->sortedIds = [];
@@ -224,15 +229,16 @@ class SubsetFinder
      * Build the found subsets as one item per id with the allocated quantity.
      *
      * @param array<int|string, int> $allocated
+     * @return Subsetable[]
      */
-    private function buildFoundSubsets(array $allocated): Collection
+    private function buildFoundSubsets(array $allocated): array
     {
-        $found = collect();
+        $found = [];
 
         foreach ($allocated as $id => $quantity) {
             $item = clone $this->itemsById[$id];
             $item->setQuantity($quantity);
-            $found->push($item);
+            $found[] = $item;
         }
 
         return $found;
@@ -242,35 +248,41 @@ class SubsetFinder
      * Calculate remaining quantities for items not consumed by subsets.
      *
      * @param array<int|string, int> $allocated
+     * @return Subsetable[]
      */
-    private function buildRemaining(array $allocated): Collection
+    private function buildRemaining(array $allocated): array
     {
-        return $this->collection
-            ->map(function(Subsetable $item) use (&$allocated) {
-                $clone = clone $item;
-                $taken = min($clone->getQuantity(), $allocated[$clone->getId()] ?? 0);
+        $remaining = [];
 
-                if ($taken > 0) {
-                    $allocated[$clone->getId()] -= $taken;
-                    $clone->setQuantity($clone->getQuantity() - $taken);
-                }
+        foreach ($this->items as $item) {
+            $clone = clone $item;
+            $taken = min($clone->getQuantity(), $allocated[$clone->getId()] ?? 0);
 
-                return $clone;
-            })
-            ->reject(fn(Subsetable $item) => $item->getQuantity() <= 0)
-            ->values();
+            if ($taken > 0) {
+                $allocated[$clone->getId()] -= $taken;
+                $clone->setQuantity($clone->getQuantity() - $taken);
+            }
+
+            if ($clone->getQuantity() > 0) {
+                $remaining[] = $clone;
+            }
+        }
+
+        return $remaining;
     }
 
     /**
      * Get the first $count items in sort order, one entry per unit.
+     *
+     * @return Subsetable[]
      */
-    public function getSubsetItems(int $count): Collection
+    public function getSubsetItems(int $count): array
     {
         if ($count < 0) {
             throw new InvalidArgumentException('Count must be non-negative');
         }
 
-        $result = collect();
+        $result = [];
 
         foreach ($this->sortedItems as $item) {
             if ($count <= 0) {
@@ -279,7 +291,7 @@ class SubsetFinder
 
             $emit = min($item->getQuantity(), $count);
             for ($i = 0; $i < $emit; $i++) {
-                $result->push(clone $item);
+                $result[] = clone $item;
             }
 
             $count -= max(0, $emit);
@@ -298,16 +310,20 @@ class SubsetFinder
 
     /**
      * Get the found subsets.
+     *
+     * @return Subsetable[]
      */
-    public function getFoundSubsets(): Collection
+    public function getFoundSubsets(): array
     {
         return $this->foundSubsets;
     }
 
     /**
      * Get the remaining items not included in any subset.
+     *
+     * @return Subsetable[]
      */
-    public function getRemaining(): Collection
+    public function getRemaining(): array
     {
         return $this->remainingSubsets;
     }
@@ -319,10 +335,10 @@ class SubsetFinder
     {
         return [
             'execution_time_ms' => round($this->executionTime * 1000, 2),
-            'collection_size' => $this->collection->count(),
+            'collection_size' => count($this->items),
             'subset_count' => $this->subsetCollection->count(),
-            'found_subsets_count' => $this->foundSubsets->count(),
-            'remaining_items_count' => $this->remainingSubsets->count(),
+            'found_subsets_count' => count($this->foundSubsets),
+            'remaining_items_count' => count($this->remainingSubsets),
         ];
     }
 
@@ -331,7 +347,7 @@ class SubsetFinder
      */
     public function isOptimal(): bool
     {
-        return $this->remainingSubsets->isEmpty();
+        return $this->remainingSubsets === [];
     }
 
     /**
@@ -339,8 +355,8 @@ class SubsetFinder
      */
     public function getEfficiencyPercentage(): float
     {
-        $totalItems = $this->collection->sum(fn(Subsetable $item) => $item->getQuantity());
-        $usedItems = $this->foundSubsets->sum(fn(Subsetable $item) => $item->getQuantity());
+        $totalItems = array_sum(array_map(fn(Subsetable $item) => $item->getQuantity(), $this->items));
+        $usedItems = array_sum(array_map(fn(Subsetable $item) => $item->getQuantity(), $this->foundSubsets));
 
         if ($totalItems <= 0) {
             return 0.0;

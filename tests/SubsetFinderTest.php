@@ -26,13 +26,13 @@ it('can create a subset collection', function() {
 });
 
 it('can find subsets in a collection', function() {
-    $collection = collect([
+    $collection = [
         $this->mockSubsetable(id: 1, quantity: 11, price: 15),
         $this->mockSubsetable(id: 2, quantity: 6, price: 5),
         $this->mockSubsetable(id: 3, quantity: 18, price: 10),
         $this->mockSubsetable(id: 5, quantity: 4, price: 2),
         $this->mockSubsetable(id: 12, quantity: 5, price: 6),
-    ]);
+    ];
 
     $setCollection = new SubsetCollection([
         Subset::of([1, 2])->take(5),
@@ -56,7 +56,7 @@ it('can find subsets in a collection', function() {
             ['id' => 1, 'quantity' => 9, 'price' => 15,],
             ['id' => 3, 'quantity' => 6, 'price' => 10,],
         ])
-        ->and($subsetFinder->getFoundSubsets()->pluck('quantity', 'id')->toArray())->toBe([
+        ->and(array_column($subsetFinder->getFoundSubsets(), 'quantity', 'id'))->toBe([
             2 => 6,
             1 => 9,
             3 => 6,
@@ -64,13 +64,13 @@ it('can find subsets in a collection', function() {
 });
 
 it('can find subsets with custom field names via the Subsetable interface', function() {
-    $collection = collect([
+    $collection = [
         $this->mockSubsetableAlt(1, 11, 15),
         $this->mockSubsetableAlt(2, 6, 5),
         $this->mockSubsetableAlt(3, 18, 10),
         $this->mockSubsetableAlt(5, 4, 2),
         $this->mockSubsetableAlt(12, 5, 6),
-    ]);
+    ];
 
     $setCollection = new SubsetCollection([
         Subset::of([1, 2])->take(5),
@@ -91,13 +91,13 @@ it('can find subsets with custom field names via the Subsetable interface', func
 });
 
 it('can return empty if there is no subset found', function() {
-    $collection = collect([
+    $collection = [
         $this->mockSubsetable(1, 11, 15),
         $this->mockSubsetable(2, 6, 5),
         $this->mockSubsetable(3, 18, 10),
         $this->mockSubsetable(5, 4, 2),
         $this->mockSubsetable(12, 5, 6),
-    ]);
+    ];
 
     $setCollection = new SubsetCollection([
         Subset::of([1, 2])->take(22),
@@ -110,13 +110,13 @@ it('can return empty if there is no subset found', function() {
 });
 
 it('can cover all items in the collection and remaining will be empty array ', function() {
-    $collection = collect([
+    $collection = [
         $this->mockSubsetable(1, 11, 15),
         $this->mockSubsetable(2, 6, 5),
         $this->mockSubsetable(3, 18, 10),
         $this->mockSubsetable(5, 4, 2),
         $this->mockSubsetable(12, 5, 6),
-    ]);
+    ];
 
     $setCollection = new SubsetCollection([
         Subset::of([1])->take(11),
@@ -135,10 +135,10 @@ it('can cover all items in the collection and remaining will be empty array ', f
 });
 
 it('can have multiple items from the collection to look up', function() {
-    $collection = collect([
+    $collection = [
         $this->mockSubsetable(1, 11, 15),
         $this->mockSubsetable(2, 6, 5),
-    ]);
+    ];
 
     $setCollection = new SubsetCollection([
         Subset::of([1, 2])->take(11),
@@ -156,13 +156,13 @@ it('can have multiple items from the collection to look up', function() {
 });
 
 it('can have a single item in the setCollections ', function() {
-    $collection = collect([
+    $collection = [
         $this->mockSubsetable(1, 11, 15),
         $this->mockSubsetable(2, 6, 5),
         $this->mockSubsetable(3, 18, 10),
         $this->mockSubsetable(5, 4, 2),
         $this->mockSubsetable(12, 5, 6),
-    ]);
+    ];
 
     $setCollection = new SubsetCollection([
         Subset::of([1, 2, 3, 5, 12])->take(5),
@@ -185,13 +185,13 @@ it('can have a single item in the setCollections ', function() {
 });
 
 it('can get "n" many items by current order', function() {
-    $collection = collect([
+    $collection = [
         $this->mockSubsetable(1, 11, 15),
         $this->mockSubsetable(2, 6, 5),
         $this->mockSubsetable(3, 18, 10),
         $this->mockSubsetable(5, 4, 2),
         $this->mockSubsetable(12, 5, 6),
-    ]);
+    ];
 
     $setCollection = new SubsetCollection([
         Subset::of([1, 2, 3, 5, 12])->take(5),
@@ -216,13 +216,13 @@ it('can get "n" many items by current order', function() {
 });
 
 it('can get the subsets with large number of sets', function() {
-    $collection = collect([
+    $collection = [
         $this->mockSubsetable(1, 2500, 15),
         $this->mockSubsetable(2, 2000, 5),
         $this->mockSubsetable(3, 8000, 10),
         $this->mockSubsetable(5, 2900, 2),
         $this->mockSubsetable(12, 3650, 6),
-    ]);
+    ];
 
     $setCollection = new SubsetCollection([
         Subset::of([1, 2])->take(5),
@@ -248,9 +248,9 @@ it('can get the subsets with large number of sets', function() {
 });
 
 it('does not overcount when subsets share the same items', function() {
-    $collection = collect([
+    $collection = [
         $this->mockSubsetable(1, 10, 5),
-    ]);
+    ];
 
     // Each round needs 5 + 5 = 10 of item 1, so only one round fits in 10.
     $setCollection = new SubsetCollection([
@@ -262,14 +262,14 @@ it('does not overcount when subsets share the same items', function() {
     $subsetFinder->solve();
 
     expect($subsetFinder->getSubsetQuantity())->toBe(1)
-        ->and($subsetFinder->getFoundSubsets()->sum->getQuantity())->toBe(10)
+        ->and(array_sum(array_map(fn($item) => $item->getQuantity(), $subsetFinder->getFoundSubsets())))->toBe(10)
         ->and($this->convertToArray($subsetFinder->getRemaining()))->toBe([]);
 });
 
 it('treats numeric string ids and integer ids consistently', function() {
-    $collection = collect([
+    $collection = [
         $this->mockSubsetable('1', 10, 5), // string id
-    ]);
+    ];
 
     $setCollection = new SubsetCollection([
         Subset::of([1])->take(5), // int id
@@ -279,14 +279,14 @@ it('treats numeric string ids and integer ids consistently', function() {
     $subsetFinder->solve();
 
     expect($subsetFinder->getSubsetQuantity())->toBe(2)
-        ->and($subsetFinder->getFoundSubsets()->sum->getQuantity())->toBe(10);
+        ->and(array_sum(array_map(fn($item) => $item->getQuantity(), $subsetFinder->getFoundSubsets())))->toBe(10);
 });
 
 it('can handle very large quantities without expanding items', function() {
-    $collection = collect([
+    $collection = [
         $this->mockSubsetable(1, 10_000_000, 15),
         $this->mockSubsetable(2, 5_000_000, 5),
-    ]);
+    ];
 
     $setCollection = new SubsetCollection([
         Subset::of([1, 2])->take(3),
@@ -299,10 +299,10 @@ it('can handle very large quantities without expanding items', function() {
 });
 
 it('can get performance metrics', function() {
-    $collection = collect([
+    $collection = [
         $this->mockSubsetable(1, 10, 15),
         $this->mockSubsetable(2, 5, 5),
-    ]);
+    ];
 
     $setCollection = new SubsetCollection([
         Subset::of([1, 2])->take(5),
@@ -325,10 +325,10 @@ it('can get performance metrics', function() {
 });
 
 it('can check if solution is optimal', function() {
-    $collection = collect([
+    $collection = [
         $this->mockSubsetable(1, 10, 15),
         $this->mockSubsetable(2, 5, 5),
-    ]);
+    ];
 
     $setCollection = new SubsetCollection([
         Subset::of([1])->take(10),
@@ -342,10 +342,10 @@ it('can check if solution is optimal', function() {
 });
 
 it('can calculate efficiency percentage', function() {
-    $collection = collect([
+    $collection = [
         $this->mockSubsetable(1, 10, 15),
         $this->mockSubsetable(2, 5, 5),
-    ]);
+    ];
 
     $setCollection = new SubsetCollection([
         Subset::of([1, 2])->take(10),
@@ -359,7 +359,7 @@ it('can calculate efficiency percentage', function() {
 });
 
 it('throws exception for invalid input', function() {
-    $emptyCollection = collect();
+    $emptyCollection = [];
     $setCollection = new SubsetCollection([
         Subset::of([1])->take(5),
     ]);
@@ -384,7 +384,7 @@ it('can use SubsetCollection helper methods', function() {
         Subset::of([3])->take(2),
     ]);
 
-    expect($subsetCollection->getAllItemIds()->toArray())->toBe([1, 2, 3])
+    expect($subsetCollection->getAllItemIds())->toBe([1, 2, 3])
         ->and($subsetCollection->getTotalRequiredQuantity())->toBe(7)
         ->and($subsetCollection->containsItem(1))->toBeTrue()
         ->and($subsetCollection->containsItem(4))->toBeFalse();

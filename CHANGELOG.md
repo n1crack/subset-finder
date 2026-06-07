@@ -14,7 +14,7 @@ All notable changes to `subset-finder` will be documented in this file.
 
 - The solver now works purely on per-id quantities instead of expanding every item into unit copies. Memory usage is flat and independent of quantities; quantities in the billions solve in milliseconds.
 - `SubsetFinderConfig` is reduced to `sortField` and `sortDescending`. Item ids and quantities are read through the `Subsetable` interface, so `idField`/`quantityField` are gone. Memory and lazy-evaluation options are obsolete and removed.
-- Requires only `illuminate/collections` instead of the full Laravel framework; the `ext-redis` requirement is gone.
+- **Zero dependencies**: the package no longer requires Laravel, `illuminate/collections`, `psr/log` or `ext-redis`. `SubsetFinder` accepts any iterable (arrays, generators, Laravel collections); `getFoundSubsets()`, `getRemaining()` and `getSubsetItems()` return plain arrays. `SubsetCollection` is a standalone `Countable`/`IteratorAggregate` class instead of extending Laravel's `Collection`.
 
 ### Removed
 

@@ -2,50 +2,88 @@
 
 namespace Ozdemir\SubsetFinder;
 
-use Illuminate\Support\Collection;
+use ArrayIterator;
+use Countable;
+use IteratorAggregate;
 use Ozdemir\SubsetFinder\Exceptions\InvalidArgumentException;
 
-class SubsetCollection extends Collection
+class SubsetCollection implements Countable, IteratorAggregate
 {
+    /** @var Subset[] */
+    private array $subsets = [];
+
     /**
-     * Create a new collection instance.
-     *
-     * @param array $items
+     * @param iterable<mixed> $subsets Validated to contain only Subset instances.
      * @throws InvalidArgumentException
      */
-    public function __construct($items = [])
+    public function __construct(iterable $subsets = [])
     {
-        parent::__construct($items);
-
-        foreach ($this->items as $index => $item) {
-            if (!$item instanceof Subset) {
+        foreach ($subsets as $index => $subset) {
+            if (!$subset instanceof Subset) {
                 throw new InvalidArgumentException(
                     "Item at index {$index} is not a Subset instance. " .
-                    "Got: " . (is_object($item) ? get_class($item) : gettype($item))
+                    "Got: " . (is_object($subset) ? get_class($subset) : gettype($subset))
                 );
             }
+
+            $this->subsets[] = $subset;
         }
     }
 
     /**
      * Add a subset to the collection.
      *
-     * @param Subset $subset
      * @return $this
      */
     public function addSubset(Subset $subset): self
     {
-        $this->push($subset);
+        $this->subsets[] = $subset;
 
         return $this;
     }
 
     /**
-     * Get all unique item IDs from all subsets.
+     * @return Subset[]
      */
-    public function getAllItemIds(): Collection
+    public function all(): array
     {
-        return $this->toBase()->pluck('items')->flatten(1)->unique()->values();
+        return $this->subsets;
+    }
+
+    public function count(): int
+    {
+        return count($this->subsets);
+    }
+
+    public function isEmpty(): bool
+    {
+        return $this->subsets === [];
+    }
+
+    /**
+     * @return ArrayIterator<int, Subset>
+     */
+    public function getIterator(): ArrayIterator
+    {
+        return new ArrayIterator($this->subsets);
+    }
+
+    /**
+     * Get all unique item IDs from all subsets.
+     *
+     * @return array<int, int|string>
+     */
+    public function getAllItemIds(): array
+    {
+        $ids = [];
+
+        foreach ($this->subsets as $subset) {
+            foreach ($subset->items as $id) {
+                $ids[$id] = $id;
+            }
+        }
+
+        return array_values($ids);
     }
 
     /**
@@ -53,7 +91,7 @@ class SubsetCollection extends Collection
      */
     public function getTotalRequiredQuantity(): int
     {
-        return (int) $this->sum('quantity');
+        return array_sum(array_map(fn(Subset $subset) => $subset->quantity, $this->subsets));
     }
 
     /**
@@ -61,7 +99,13 @@ class SubsetCollection extends Collection
      */
     public function containsItem(int|string $itemId): bool
     {
-        return $this->contains(fn(Subset $subset) => $subset->contains($itemId));
+        foreach ($this->subsets as $subset) {
+            if ($subset->contains($itemId)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -69,6 +113,6 @@ class SubsetCollection extends Collection
      */
     public function filterByItem(int|string $itemId): self
     {
-        return $this->filter(fn(Subset $subset) => $subset->contains($itemId));
+        return new self(array_filter($this->subsets, fn(Subset $subset) => $subset->contains($itemId)));
     }
 }

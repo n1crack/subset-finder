@@ -9,7 +9,7 @@ use Ozdemir\SubsetFinder\SubsetFinderConfig;
 
 /**
  * E-commerce Bundle Creation Example
- * 
+ *
  * This example demonstrates how to create product bundles for promotions,
  * ensuring optimal inventory usage and maximum profit.
  */
@@ -57,7 +57,7 @@ echo "🛍️  E-commerce Bundle Creation Example\n";
 echo "=====================================\n\n";
 
 // Create inventory with various products
-$inventory = collect([
+$inventory = [
     new Product(1, 'Premium T-Shirt', 100, 29.99, 'Clothing', 15.00),
     new Product(2, 'Basic Socks', 200, 9.99, 'Clothing', 4.50),
     new Product(3, 'Designer Hat', 50, 49.99, 'Accessories', 25.00),
@@ -66,10 +66,10 @@ $inventory = collect([
     new Product(6, 'Sports Socks', 150, 12.99, 'Footwear', 6.00),
     new Product(7, 'Phone Case', 300, 19.99, 'Electronics', 8.00),
     new Product(8, 'Screen Protector', 500, 14.99, 'Electronics', 5.00),
-]);
+];
 
 echo "📦 Inventory Overview:\n";
-$inventory->each(function (Product $product) {
+foreach ($inventory as $product) {
     printf("  %s (ID: %d): %d units @ $%.2f (Cost: $%.2f, Profit: $%.2f)\n",
         $product->name,
         $product->id,
@@ -78,7 +78,7 @@ $inventory->each(function (Product $product) {
         $product->cost,
         $product->getProfit()
     );
-});
+}
 
 echo "\n";
 
@@ -86,31 +86,31 @@ echo "\n";
 $bundles = new SubsetCollection([
     // Summer Bundle: T-Shirt + Socks + Hat
     Subset::of([1, 2, 3])->take(3),
-    
+
     // Athlete Bundle: Shoes + Sports Socks
     Subset::of([5, 6])->take(2),
-    
+
     // Tech Bundle: Phone Case + Screen Protector
     Subset::of([7, 8])->take(2),
-    
+
     // Fashion Bundle: T-Shirt + Belt
     Subset::of([1, 4])->take(2),
 ]);
 
 echo "🎁 Bundle Configurations:\n";
-$bundles->each(function (Subset $bundle, $index) use ($inventory) {
-    $bundleProducts = $inventory->whereIn('id', $bundle->items);
-    $totalPrice = $bundleProducts->sum('price');
-    $totalCost = $bundleProducts->sum('cost');
+foreach ($bundles as $index => $bundle) {
+    $bundleProducts = array_filter($inventory, fn(Product $p) => in_array($p->id, $bundle->items, true));
+    $totalPrice = array_sum(array_map(fn(Product $p) => $p->price, $bundleProducts));
+    $totalCost = array_sum(array_map(fn(Product $p) => $p->cost, $bundleProducts));
     $profit = $totalPrice - $totalCost;
-    
+
     printf("  Bundle %d: %s items, Total: $%.2f, Profit: $%.2f\n",
         $index + 1,
-        implode(' + ', $bundleProducts->pluck('name')->toArray()),
+        implode(' + ', array_map(fn(Product $p) => $p->name, $bundleProducts)),
         $totalPrice,
         $profit
     );
-});
+}
 
 echo "\n";
 
@@ -119,9 +119,7 @@ $config = new SubsetFinderConfig(sortField: 'price');
 $subsetFinder = new SubsetFinder($inventory, $bundles, $config);
 
 echo "🔍 Calculating optimal bundle combinations...\n";
-$startTime = microtime(true);
 $subsetFinder->solve();
-$executionTime = microtime(true) - $startTime;
 
 echo "\n";
 
@@ -134,20 +132,20 @@ echo "🎯 Maximum complete bundles that can be created: {$maxBundles}\n\n";
 
 echo "✅ Bundles Created:\n";
 $foundSubsets = $subsetFinder->getFoundSubsets();
-$foundSubsets->each(function (Product $product) {
+foreach ($foundSubsets as $product) {
     printf("  %s: %d units\n", $product->name, $product->quantity);
-});
+}
 
 echo "\n";
 
 echo "📦 Remaining Inventory:\n";
 $remaining = $subsetFinder->getRemaining();
-if ($remaining->isEmpty()) {
+if ($remaining === []) {
     echo "  🎉 All inventory used! Perfect allocation.\n";
 } else {
-    $remaining->each(function (Product $product) {
+    foreach ($remaining as $product) {
         printf("  %s: %d units remaining\n", $product->name, $product->quantity);
-    });
+    }
 }
 
 echo "\n";
@@ -156,16 +154,14 @@ echo "\n";
 $metrics = $subsetFinder->getPerformanceMetrics();
 echo "⚡ Performance Metrics:\n";
 echo "  Execution Time: {$metrics['execution_time_ms']}ms\n";
-echo "  Memory Peak: {$metrics['memory_peak_mb']}MB\n";
-echo "  Memory Increase: {$metrics['memory_increase_mb']}MB\n";
 echo "  Efficiency: {$subsetFinder->getEfficiencyPercentage()}%\n";
 echo "  Optimal Solution: " . ($subsetFinder->isOptimal() ? 'Yes' : 'No') . "\n";
 
 echo "\n";
 
 // Business insights
-$totalRevenue = $foundSubsets->sum(fn($p) => $p->price * $p->quantity);
-$totalCost = $foundSubsets->sum(fn($p) => $p->cost * $p->quantity);
+$totalRevenue = array_sum(array_map(fn(Product $p) => $p->price * $p->quantity, $foundSubsets));
+$totalCost = array_sum(array_map(fn(Product $p) => $p->cost * $p->quantity, $foundSubsets));
 $totalProfit = $totalRevenue - $totalCost;
 $profitMargin = $totalRevenue > 0 ? ($totalProfit / $totalRevenue) * 100 : 0;
 

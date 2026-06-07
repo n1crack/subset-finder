@@ -7,9 +7,14 @@ use Ozdemir\SubsetFinder\Subsetable;
 
 class TestCase extends BaseTestCase
 {
-    protected function convertToArray($subsetables): array
+    protected function convertToArray(iterable $subsetables): array
     {
-        return $subsetables->map(fn($subsetable) => $subsetable->toArray())->toArray();
+        $result = [];
+        foreach ($subsetables as $subsetable) {
+            $result[] = $subsetable->toArray();
+        }
+
+        return $result;
     }
 
     protected function mockSubsetable($id, $quantity, $price): Subsetable

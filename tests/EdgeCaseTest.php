@@ -17,10 +17,10 @@ class EdgeCaseTest extends TestCase
      */
     public function test_with_extremely_large_quantities(): void
     {
-        $collection = collect([
+        $collection = [
             $this->mockSubsetable(1, 10000, 100),
             $this->mockSubsetable(2, 10000, 200),
-        ]);
+        ];
 
         $subsetCollection = new SubsetCollection([
             Subset::of([1, 2])->take(1000),
@@ -37,10 +37,10 @@ class EdgeCaseTest extends TestCase
      */
     public function test_with_zero_quantities(): void
     {
-        $collection = collect([
+        $collection = [
             $this->mockSubsetable(1, 0, 100),
             $this->mockSubsetable(2, 10, 200),
-        ]);
+        ];
 
         $subsetCollection = new SubsetCollection([
             Subset::of([1, 2])->take(5),
@@ -59,9 +59,9 @@ class EdgeCaseTest extends TestCase
      */
     public function test_with_empty_subset_collection(): void
     {
-        $collection = collect([
+        $collection = [
             $this->mockSubsetable(1, 10, 100),
-        ]);
+        ];
 
         $emptySubsetCollection = new SubsetCollection([]);
 
@@ -74,10 +74,10 @@ class EdgeCaseTest extends TestCase
      */
     public function test_with_single_item_subsets(): void
     {
-        $collection = collect([
+        $collection = [
             $this->mockSubsetable(1, 100, 100),
             $this->mockSubsetable(2, 50, 200),
-        ]);
+        ];
 
         $subsetCollection = new SubsetCollection([
             Subset::of([1])->take(10),
@@ -97,10 +97,10 @@ class EdgeCaseTest extends TestCase
      */
     public function test_with_overlapping_item_ids(): void
     {
-        $collection = collect([
+        $collection = [
             $this->mockSubsetable(1, 100, 100),
             $this->mockSubsetable(2, 50, 200),
-        ]);
+        ];
 
         $subsetCollection = new SubsetCollection([
             Subset::of([1, 2])->take(10),
@@ -116,7 +116,7 @@ class EdgeCaseTest extends TestCase
         $this->assertEquals(3, $subsetFinder->getSubsetQuantity());
 
         // 4 rounds would need 4 * 45 = 180 > 150 items in total.
-        $allocated = $subsetFinder->getFoundSubsets()->sum(fn($item) => $item->getQuantity());
+        $allocated = array_sum(array_map(fn($item) => $item->getQuantity(), $subsetFinder->getFoundSubsets()));
         $this->assertEquals(3 * 45, $allocated);
     }
 
@@ -125,10 +125,10 @@ class EdgeCaseTest extends TestCase
      */
     public function test_with_very_small_quantities(): void
     {
-        $collection = collect([
+        $collection = [
             $this->mockSubsetable(1, 1, 100),
             $this->mockSubsetable(2, 1, 200),
-        ]);
+        ];
 
         $subsetCollection = new SubsetCollection([
             Subset::of([1, 2])->take(1),
@@ -147,11 +147,11 @@ class EdgeCaseTest extends TestCase
      */
     public function test_with_mixed_data_types(): void
     {
-        $collection = collect([
+        $collection = [
             $this->mockSubsetable(1, 10, 100),
             $this->mockSubsetable(2, 20, 200),
             'invalid_item', // This should cause an error
-        ]);
+        ];
 
         $subsetCollection = new SubsetCollection([
             Subset::of([1, 2])->take(5),
@@ -166,11 +166,11 @@ class EdgeCaseTest extends TestCase
      */
     public function test_with_extreme_sorting_scenarios(): void
     {
-        $collection = collect([
+        $collection = [
             $this->mockSubsetable(1, 10, 0.001),      // Very small price
             $this->mockSubsetable(2, 20, 999999.99),  // Very large price
             $this->mockSubsetable(3, 15, 100.00),     // Normal price
-        ]);
+        ];
 
         $subsetCollection = new SubsetCollection([
             Subset::of([1, 2, 3])->take(5),
@@ -196,9 +196,9 @@ class EdgeCaseTest extends TestCase
      */
     public function test_with_empty_collections_after_filtering(): void
     {
-        $collection = collect([
+        $collection = [
             $this->mockSubsetable(1, 10, 100),
-        ]);
+        ];
 
         $subsetCollection = new SubsetCollection([
             Subset::of([999])->take(5), // Non-existent item ID
@@ -234,16 +234,16 @@ class EdgeCaseTest extends TestCase
     /**
      * Create a large collection for testing
      */
-    private function createLargeCollection(int $size): \Illuminate\Support\Collection
+    private function createLargeCollection(int $size): array
     {
-        $collection = collect();
+        $collection = [];
 
         for ($i = 1; $i <= $size; $i++) {
-            $collection->push($this->mockSubsetable(
+            $collection[] = $this->mockSubsetable(
                 $i,
                 rand(10, 1000),
                 rand(1000, 10000) / 100
-            ));
+            );
         }
 
         return $collection;
