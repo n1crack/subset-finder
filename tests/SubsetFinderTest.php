@@ -282,20 +282,115 @@ it('treats numeric string ids and integer ids consistently', function() {
         ->and(array_sum(array_map(fn($item) => $item->getQuantity(), $subsetFinder->getFoundSubsets())))->toBe(10);
 });
 
-it('can handle very large quantities without expanding items', function() {
+it('allocates overlapping subsets from a shared pool', function() {
     $collection = [
-        $this->mockSubsetable(1, 10_000_000, 15),
-        $this->mockSubsetable(2, 5_000_000, 5),
+        $this->mockSubsetable(1, 100, 100),
+        $this->mockSubsetable(2, 50, 200),
     ];
 
     $setCollection = new SubsetCollection([
-        Subset::of([1, 2])->take(3),
+        Subset::of([1, 2])->take(10),
+        Subset::of([1])->take(20),
+        Subset::of([2])->take(15),
     ]);
 
     $subsetFinder = new SubsetFinder($collection, $setCollection);
     $subsetFinder->solve();
 
-    expect($subsetFinder->getSubsetQuantity())->toBe(5_000_000);
+    // Each round consumes 10 + 20 + 15 = 45 items from a pool of 150,
+    // but item 1 alone caps rounds at 3 (3 * (10 + 20) = 90 <= 100).
+    expect($subsetFinder->getSubsetQuantity())->toBe(3)
+        ->and(array_sum(array_map(fn($item) => $item->getQuantity(), $subsetFinder->getFoundSubsets())))->toBe(3 * 45);
+});
+
+it('can handle zero quantity items', function() {
+    $collection = [
+        $this->mockSubsetable(1, 0, 100),
+        $this->mockSubsetable(2, 10, 200),
+    ];
+
+    $setCollection = new SubsetCollection([
+        Subset::of([1, 2])->take(5),
+    ]);
+
+    $subsetFinder = new SubsetFinder($collection, $setCollection);
+    $subsetFinder->solve();
+
+    // Item 1 contributes nothing; (0 + 10) / 5 = 2
+    expect($subsetFinder->getSubsetQuantity())->toBe(2);
+});
+
+it('sorts ascending and descending consistently', function() {
+    $collection = [
+        $this->mockSubsetable(1, 10, 0.001),     // Very small price
+        $this->mockSubsetable(2, 20, 999999.99), // Very large price
+        $this->mockSubsetable(3, 15, 100.00),    // Normal price
+    ];
+
+    $setCollection = new SubsetCollection([
+        Subset::of([1, 2, 3])->take(5),
+    ]);
+
+    foreach ([false, true] as $descending) {
+        $config = new SubsetFinderConfig(sortField: 'price', sortDescending: $descending);
+        $subsetFinder = new SubsetFinder($collection, $setCollection, $config);
+        $subsetFinder->solve();
+
+        expect($subsetFinder->getSubsetQuantity())->toBe(9); // (10 + 20 + 15) / 5
+    }
+});
+
+it('throws for subsets referencing unknown ids', function() {
+    $collection = [
+        $this->mockSubsetable(1, 10, 100),
+    ];
+
+    $setCollection = new SubsetCollection([
+        Subset::of([999])->take(5), // Non-existent item ID
+    ]);
+
+    $subsetFinder = new SubsetFinder($collection, $setCollection);
+
+    expect(fn() => $subsetFinder->solve())->toThrow(InsufficientQuantityException::class);
+});
+
+it('throws when collection contains non-Subsetable items', function() {
+    $collection = [
+        $this->mockSubsetable(1, 10, 100),
+        'invalid_item',
+    ];
+
+    $setCollection = new SubsetCollection([
+        Subset::of([1])->take(5),
+    ]);
+
+    expect(fn() => new SubsetFinder($collection, $setCollection))
+        ->toThrow(InvalidArgumentException::class, 'All collection items must implement Subsetable interface');
+});
+
+it('throws for empty subset collection', function() {
+    $collection = [
+        $this->mockSubsetable(1, 10, 100),
+    ];
+
+    expect(fn() => new SubsetFinder($collection, new SubsetCollection()))
+        ->toThrow(InvalidArgumentException::class, 'Subset collection cannot be empty');
+});
+
+it('can handle very large quantities without expanding items', function() {
+    $collection = [
+        $this->mockSubsetable(1, 2_000_000_000, 10),
+        $this->mockSubsetable(2, 1_000_000_000, 20),
+    ];
+
+    $setCollection = new SubsetCollection([
+        Subset::of([1, 2])->take(7),
+    ]);
+
+    $subsetFinder = new SubsetFinder($collection, $setCollection);
+    $subsetFinder->solve();
+
+    expect($subsetFinder->getSubsetQuantity())->toBe(intdiv(3_000_000_000, 7));
 });
 
 it('can get performance metrics', function() {
