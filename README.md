@@ -8,6 +8,8 @@ A dependency-free PHP package for finding subsets within collections based on qu
 
 Given a pool of items with quantities, it answers: *"How many complete sets can I build, which items go into them, and what is left over?"* — useful for bundle pricing, cart discounts ("buy 5 of X and 2 of Y"), and inventory allocation.
 
+**[▶ Try the interactive demo](https://n1crack.github.io/subset-finder/)** — three live use cases (bundle builder, shared-stock allocation, scale test) running a JavaScript port of the solver in your browser.
+
 ## Features
 
 - **Pure arithmetic solver**: quantities are never expanded into unit items, so memory stays flat and quantities in the billions solve in milliseconds
