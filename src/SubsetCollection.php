@@ -17,44 +17,7 @@ class SubsetCollection extends Collection
     {
         parent::__construct($items);
 
-        // Only validate the initial constructor call, not internal Laravel operations
-        if (!empty($items) && $this->isInitialConstructorCall()) {
-            $this->validateItems($items);
-        }
-    }
-
-    /**
-     * Check if this is the initial constructor call from user code.
-     * This prevents validation during internal Laravel Collection operations.
-     */
-    private function isInitialConstructorCall(): bool
-    {
-        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5);
-
-        // Look for calls that are not from Laravel's internal Collection methods
-        foreach ($trace as $call) {
-            if (isset($call['class']) && str_starts_with($call['class'], 'Illuminate\\Support\\Collection')) {
-                // This is an internal Laravel call, skip validation
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Validate that all items are Subset instances.
-     *
-     * @param array $items
-     * @throws InvalidArgumentException
-     */
-    private function validateItems($items): void
-    {
-        if (!is_array($items)) {
-            throw new InvalidArgumentException('Items must be an array');
-        }
-
-        foreach ($items as $index => $item) {
+        foreach ($this->items as $index => $item) {
             if (!$item instanceof Subset) {
                 throw new InvalidArgumentException(
                     "Item at index {$index} is not a Subset instance. " .
@@ -82,7 +45,7 @@ class SubsetCollection extends Collection
      */
     public function getAllItemIds(): Collection
     {
-        return $this->pluck('items')->flatten(1)->unique();
+        return $this->toBase()->pluck('items')->flatten(1)->unique()->values();
     }
 
     /**
@@ -90,7 +53,7 @@ class SubsetCollection extends Collection
      */
     public function getTotalRequiredQuantity(): int
     {
-        return $this->sum('quantity');
+        return (int) $this->sum('quantity');
     }
 
     /**

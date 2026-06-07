@@ -2,10 +2,10 @@
 
 namespace Ozdemir\SubsetFinder\Tests;
 
+use Ozdemir\SubsetFinder\Exceptions\InsufficientQuantityException;
 use Ozdemir\SubsetFinder\Subset;
 use Ozdemir\SubsetFinder\SubsetCollection;
 use Ozdemir\SubsetFinder\SubsetFinder;
-use Ozdemir\SubsetFinder\SubsetFinderConfig;
 
 class PerformanceTest extends TestCase
 {
@@ -22,7 +22,8 @@ class PerformanceTest extends TestCase
     }
 
     /**
-     * Test memory usage with large datasets
+     * Test memory usage with large datasets: the solver works on per-id
+     * quantities, so memory must stay flat regardless of item quantities.
      */
     public function test_memory_usage_with_large_datasets(): void
     {
@@ -32,120 +33,47 @@ class PerformanceTest extends TestCase
         $startMemory = memory_get_usage(true);
 
         $subsetFinder = new SubsetFinder($largeCollection, $largeSubsetCollection);
-        $subsetFinder->solve();
+        $this->solveIgnoringInsufficiency($subsetFinder);
 
         $endMemory = memory_get_usage(true);
         $memoryUsed = $endMemory - $startMemory;
 
-        // Should use less than 50MB for 1k items
+        // Should use less than 10MB for 1k items
         $this->assertLessThan(
-            50 * 1024 * 1024,
+            10 * 1024 * 1024,
             $memoryUsed,
-            "Memory usage should be less than 50MB for 1k items, got: " .
+            "Memory usage should be less than 10MB for 1k items, got: " .
             number_format($memoryUsed / 1024 / 1024, 2) . "MB"
         );
     }
 
     /**
-     * Test configuration profiles performance
+     * Quantities are not expanded into unit items, so even absurd
+     * quantities must solve instantly with flat memory.
      */
-    public function test_configuration_profiles_performance(): void
+    public function test_huge_quantities_solve_fast(): void
     {
-        $collection = $this->createLargeCollection(500);
-        $subsetCollection = $this->createLargeSubsetCollection(20);
+        $collection = collect([
+            $this->mockSubsetable(1, 2_000_000_000, 10),
+            $this->mockSubsetable(2, 1_000_000_000, 20),
+        ]);
 
-        $profiles = [
-            'default' => SubsetFinderConfig::default(),
-            'large_datasets' => SubsetFinderConfig::forLargeDatasets(),
-            'performance' => SubsetFinderConfig::forPerformance(),
-            'balanced' => SubsetFinderConfig::forBalanced(),
-        ];
+        $subsetCollection = new SubsetCollection([
+            Subset::of([1, 2])->take(7),
+        ]);
 
-        foreach ($profiles as $name => $config) {
-            $startTime = microtime(true);
-            $startMemory = memory_get_usage(true);
-
-            $subsetFinder = new SubsetFinder($collection, $subsetCollection, $config);
-            $subsetFinder->solve();
-
-            $executionTime = microtime(true) - $startTime;
-            $memoryUsed = memory_get_usage(true) - $startMemory;
-
-            if (getenv('DEBUG_PERFORMANCE') === 'true') {
-                echo "Profile: {$name} - Time: " . number_format($executionTime * 1000, 2) . "ms, Memory: " .
-                     number_format($memoryUsed / 1024 / 1024, 2) . "MB\n";
-            }
-
-            // All profiles should complete in reasonable time
-            $this->assertLessThan(
-                2.0,
-                $executionTime,
-                "Profile {$name} should complete in under 2 seconds"
-            );
-        }
-    }
-
-    /**
-     * Test lazy evaluation performance
-     */
-    public function test_lazy_evaluation_performance(): void
-    {
-        $collection = $this->createLargeCollection(1000);
-        $subsetCollection = $this->createLargeSubsetCollection(20);
-
-        // Test with lazy evaluation enabled
-        $lazyConfig = new SubsetFinderConfig(enableLazyEvaluation: true);
         $startTime = microtime(true);
         $startMemory = memory_get_usage(true);
 
-        $subsetFinder = new SubsetFinder($collection, $subsetCollection, $lazyConfig);
+        $subsetFinder = new SubsetFinder($collection, $subsetCollection);
         $subsetFinder->solve();
 
-        $lazyTime = microtime(true) - $startTime;
-        $lazyMemory = memory_get_usage(true) - $startMemory;
+        $executionTime = microtime(true) - $startTime;
+        $memoryUsed = memory_get_usage(true) - $startMemory;
 
-        // Test with lazy evaluation disabled
-        $eagerConfig = new SubsetFinderConfig(enableLazyEvaluation: false);
-        $startTime = microtime(true);
-        $startMemory = memory_get_usage(true);
-
-        $subsetFinder = new SubsetFinder($collection, $subsetCollection, $eagerConfig);
-        $subsetFinder->solve();
-
-        $eagerTime = microtime(true) - $startTime;
-        $eagerMemory = memory_get_usage(true) - $startMemory;
-
-        if (getenv('DEBUG_PERFORMANCE') === 'true') {
-            echo "Lazy Evaluation: Time: " . number_format($lazyTime * 1000, 2) . "ms, Memory: " .
-                 number_format($lazyMemory / 1024 / 1024, 2) . "MB\n";
-            echo "Eager Evaluation: Time: " . number_format($eagerTime * 1000, 2) . "ms, Memory: " .
-                 number_format($eagerMemory / 1024 / 1024, 2) . "MB\n";
-        }
-
-        // Lazy evaluation memory usage can vary, but should be reasonable
-        // Handle cases where memory measurements might be 0 or very small
-        if ($eagerMemory < 1024) {
-            // Eager evaluation used very little memory, just ensure lazy evaluation is reasonable
-            $this->assertLessThan(
-                10 * 1024 * 1024,
-                $lazyMemory,
-                "Lazy evaluation should not use more than 10MB when eager evaluation uses very little memory"
-            );
-        } elseif ($lazyMemory < 1024) {
-            // Lazy evaluation used very little memory, just ensure eager evaluation is reasonable
-            $this->assertLessThan(
-                10 * 1024 * 1024,
-                $eagerMemory,
-                "Eager evaluation should not use more than 10MB when lazy evaluation uses very little memory"
-            );
-        } else {
-            // Both used measurable memory, allow for up to 2x difference
-            $this->assertLessThanOrEqual(
-                $eagerMemory * 2,
-                $lazyMemory,
-                "Lazy evaluation should not use more than 2x the memory of eager evaluation"
-            );
-        }
+        $this->assertEquals(intdiv(3_000_000_000, 7), $subsetFinder->getSubsetQuantity());
+        $this->assertLessThan(0.1, $executionTime, 'Huge quantities should solve in under 100ms');
+        $this->assertLessThan(1024 * 1024, $memoryUsed, 'Huge quantities should not allocate memory');
     }
 
     /**
@@ -157,32 +85,21 @@ class PerformanceTest extends TestCase
         $subsetCollection = $this->createLargeSubsetCollection(10);
 
         $startTime = microtime(true);
-        $startMemory = memory_get_usage(true);
 
         $subsetFinder = new SubsetFinder($collection, $subsetCollection);
-        $subsetFinder->solve();
+        $this->solveIgnoringInsufficiency($subsetFinder);
 
         $actualTime = microtime(true) - $startTime;
-        $actualMemory = memory_get_usage(true) - $startMemory;
 
         $metrics = $subsetFinder->getPerformanceMetrics();
 
-        // Metrics should be reasonably accurate
         $this->assertArrayHasKey('execution_time_ms', $metrics);
-        $this->assertArrayHasKey('memory_peak_mb', $metrics);
-        $this->assertArrayHasKey('memory_increase_mb', $metrics);
+        $this->assertArrayHasKey('collection_size', $metrics);
+        $this->assertArrayHasKey('subset_count', $metrics);
 
-        // Execution time should be within 10% accuracy
-        $reportedTime = $metrics['execution_time_ms'] / 1000;
-        $timeDifference = abs($actualTime - $reportedTime);
-        $timeAccuracy = $timeDifference / $actualTime;
-
-        $this->assertLessThan(
-            0.2, // Allow 20% tolerance for timing variations
-            $timeAccuracy,
-            "Execution time accuracy should be within 20%, got: " .
-            number_format($timeAccuracy * 100, 1) . "%"
-        );
+        $this->assertEquals(200, $metrics['collection_size']);
+        $this->assertEquals(10, $metrics['subset_count']);
+        $this->assertLessThanOrEqual($actualTime * 1000, $metrics['execution_time_ms']);
     }
 
     /**
@@ -203,7 +120,7 @@ class PerformanceTest extends TestCase
             $startTime = microtime(true);
 
             $subsetFinder = new SubsetFinder($collection, $subsetCollection);
-            $subsetFinder->solve();
+            $this->solveIgnoringInsufficiency($subsetFinder);
 
             $executionTime = microtime(true) - $startTime;
 
@@ -219,6 +136,19 @@ class PerformanceTest extends TestCase
                 $executionTime,
                 "Performance should scale reasonably with complexity level {$complexity}"
             );
+        }
+    }
+
+    /**
+     * Solve and treat a clean insufficient-quantity result as acceptable
+     * for randomized datasets.
+     */
+    private function solveIgnoringInsufficiency(SubsetFinder $subsetFinder): void
+    {
+        try {
+            $subsetFinder->solve();
+        } catch (InsufficientQuantityException $e) {
+            // Randomized data may not allow a complete set; that is fine here.
         }
     }
 
@@ -267,20 +197,17 @@ class PerformanceTest extends TestCase
     private function runPerformanceTest(int $size): void
     {
         $collection = $this->createLargeCollection($size);
-        $subsetCollection = $this->createLargeSubsetCollection($size / 10);
+        $subsetCollection = $this->createLargeSubsetCollection(intdiv($size, 10));
 
         $startTime = microtime(true);
-        $startMemory = memory_get_usage(true);
 
         $subsetFinder = new SubsetFinder($collection, $subsetCollection);
-        $subsetFinder->solve();
+        $this->solveIgnoringInsufficiency($subsetFinder);
 
         $executionTime = microtime(true) - $startTime;
-        $memoryUsed = memory_get_usage(true) - $startMemory;
 
         if (getenv('DEBUG_PERFORMANCE') === 'true') {
-            echo "Dataset size: {$size}, Time: " . number_format($executionTime * 1000, 2) .
-                 "ms, Memory: " . number_format($memoryUsed / 1024 / 1024, 2) . "MB\n";
+            echo "Dataset size: {$size}, Time: " . number_format($executionTime * 1000, 2) . "ms\n";
         }
 
         // Performance should be reasonable for each dataset size

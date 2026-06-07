@@ -130,8 +130,8 @@ $orders->each(function (Subset $order, $index) use ($warehouse) {
 
 echo "\n";
 
-// Create SubsetFinder with balanced configuration
-$config = SubsetFinderConfig::forBalanced();
+// Create SubsetFinder with default configuration
+$config = SubsetFinderConfig::default();
 $subsetFinder = new SubsetFinder($warehouse, $orders, $config);
 
 echo "🔍 Optimizing warehouse operations...\n";

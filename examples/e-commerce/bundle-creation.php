@@ -114,8 +114,8 @@ $bundles->each(function (Subset $bundle, $index) use ($inventory) {
 
 echo "\n";
 
-// Create SubsetFinder with performance configuration for large inventory
-$config = SubsetFinderConfig::forLargeDatasets();
+// Create SubsetFinder, allocating cheapest items first
+$config = new SubsetFinderConfig(sortField: 'price');
 $subsetFinder = new SubsetFinder($inventory, $bundles, $config);
 
 echo "🔍 Calculating optimal bundle combinations...\n";

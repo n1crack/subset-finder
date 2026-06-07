@@ -5,61 +5,45 @@ namespace Ozdemir\SubsetFinder;
 use Illuminate\Support\Collection;
 use Ozdemir\SubsetFinder\Exceptions\InsufficientQuantityException;
 use Ozdemir\SubsetFinder\Exceptions\InvalidArgumentException;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 
 class SubsetFinder
 {
     private SubsetFinderConfig $config;
-    private LoggerInterface $logger;
 
-    private Collection $flatCollection;
-    private Collection $filteredFlatCollection;
+    /** @var Collection<int, Subsetable> Eligible items in sort order */
+    private Collection $sortedItems;
+
+    /** @var array<int|string, int> Available quantity per item id */
+    private array $availability = [];
+
+    /** @var array<int, int|string> Item ids in sort order (first occurrence) */
+    private array $sortedIds = [];
+
+    /** @var array<int|string, Subsetable> First item per id, used to build result objects */
+    private array $itemsById = [];
+
     private Collection $foundSubsets;
     private Collection $remainingSubsets;
     private int $subsetQuantity = 0;
-    private float $startTime;
-    private int $startMemory;
+    private float $executionTime = 0.0;
 
     /**
-     * SubsetFinder constructor.
-     *
      * @param Collection $collection
      * @param SubsetCollection $subsetCollection
      * @param SubsetFinderConfig|null $config
-     * @param LoggerInterface|null $logger
      * @throws InvalidArgumentException
      */
     public function __construct(
         private Collection $collection,
         private SubsetCollection $subsetCollection,
-        ?SubsetFinderConfig $config = null,
-        ?LoggerInterface $logger = null
+        ?SubsetFinderConfig $config = null
     ) {
         $this->config = $config ?? SubsetFinderConfig::default();
-        $this->logger = $logger ?? new NullLogger();
+        $this->foundSubsets = collect();
+        $this->remainingSubsets = collect();
+        $this->sortedItems = collect();
 
-        $this->checkMemoryAvailability();
         $this->validateInput();
-        $this->startTime = microtime(true);
-        $this->startMemory = memory_get_usage(true);
-    }
-
-    /**
-     * Check if there's sufficient memory available for processing.
-     *
-     * @throws InvalidArgumentException
-     */
-    private function checkMemoryAvailability(): void
-    {
-        $availableMemory = $this->config->maxMemoryUsage - memory_get_usage(true);
-        if ($availableMemory < 1024 * 1024) { // Less than 1MB available
-            throw new InvalidArgumentException(
-                'Insufficient memory available for processing. ' .
-                'Available: ' . number_format($availableMemory / 1024 / 1024, 2) . 'MB, ' .
-                'Required: At least 1MB'
-            );
-        }
     }
 
     /**
@@ -77,63 +61,30 @@ class SubsetFinder
             throw new InvalidArgumentException('Subset collection cannot be empty');
         }
 
-        // Validate that all collection items implement Subsetable
-        $invalidItems = $this->collection->reject(fn($item) => $item instanceof Subsetable);
-        if ($invalidItems->isNotEmpty()) {
+        if ($this->collection->contains(fn($item) => !$item instanceof Subsetable)) {
             throw new InvalidArgumentException('All collection items must implement Subsetable interface');
         }
 
-        // Check memory usage
-        if (memory_get_usage(true) > $this->config->maxMemoryUsage) {
-            throw new InvalidArgumentException('Memory usage exceeds configured limit');
+        if ($this->subsetCollection->contains(fn($subset) => !$subset instanceof Subset)) {
+            throw new InvalidArgumentException('All subset collection items must be Subset instances');
         }
     }
 
     /**
      * Solve the subset finding problem.
      *
+     * Works entirely on per-id quantities; items are never expanded into
+     * unit copies, so memory usage is independent of item quantities.
+     *
      * @throws InsufficientQuantityException
      */
     public function solve(): void
     {
-        $this->logger->info('Starting subset calculation', [
-            'collection_size' => $this->collection->count(),
-            'subset_count' => $this->subsetCollection->count(),
-            'config' => [
-                'id_field' => $this->config->idField,
-                'quantity_field' => $this->config->quantityField,
-                'sort_field' => $this->config->sortField,
-                'enable_lazy_evaluation' => $this->config->enableLazyEvaluation,
-            ],
-        ]);
+        $start = microtime(true);
 
-        try {
-            $this->calculateSubsetQuantity();
-            $this->prepareCollection();
-            $this->findSubsets();
-            $this->calculateRemaining();
+        $this->prepare();
 
-            $this->logCompletion();
-        } catch (\Exception $e) {
-            $this->logger->error('Error during subset calculation', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            throw $e;
-        }
-    }
-
-    /**
-     * Calculate the maximum number of complete subsets that can be created.
-     *
-     * @throws InsufficientQuantityException
-     */
-    private function calculateSubsetQuantity(): void
-    {
-        $this->subsetQuantity = $this->subsetCollection
-            ->map(fn(Subset $subset) => $this->calculateQuantityForSet($subset))
-            ->min();
+        $this->subsetQuantity = $this->findMaxSubsetQuantity();
 
         if ($this->subsetQuantity <= 0) {
             throw new InsufficientQuantityException(
@@ -142,166 +93,176 @@ class SubsetFinder
             );
         }
 
-        $this->logger->info('Calculated subset quantity', ['subset_quantity' => $this->subsetQuantity]);
+        $allocated = [];
+        $this->canAllocate($this->subsetQuantity, $allocated);
+
+        $this->foundSubsets = $this->buildFoundSubsets($allocated);
+        $this->remainingSubsets = $this->buildRemaining($allocated);
+
+        $this->executionTime = microtime(true) - $start;
     }
 
     /**
-     * Calculate the quantity for a given set item.
+     * Sort the collection and index eligible items by id.
+     *
+     * Ids are used as array keys throughout, so numeric strings and integers
+     * are treated as the same id ('1' === 1) consistently everywhere.
      */
-    private function calculateQuantityForSet(Subset $subset): int
+    private function prepare(): void
     {
-        $quantity = $this->collection
-            ->whereIn($this->config->idField, $subset->items)
-            ->sum($this->config->quantityField);
+        $eligibleIds = array_fill_keys($this->subsetCollection->getAllItemIds()->all(), true);
 
-        return (int)floor($quantity / $subset->quantity);
-    }
-
-    /**
-     * Prepare the collection for processing.
-     */
-    private function prepareCollection(): void
-    {
-        $this->flatCollection = $this->collection
+        $this->sortedItems = $this->collection
             ->sortBy($this->config->sortField, SORT_REGULAR, $this->config->sortDescending)
-            ->whereIn($this->config->idField, $this->subsetCollection->getAllItemIds())
-            ->flatMap(fn(Subsetable $item) => $this->duplicateItemForQuantity($item));
+            ->filter(fn(Subsetable $item) => isset($eligibleIds[$item->getId()]))
+            ->values();
 
-        $this->filteredFlatCollection = clone $this->flatCollection;
+        $this->availability = [];
+        $this->sortedIds = [];
+        $this->itemsById = [];
 
-        $this->logger->info('Collection prepared', [
-            'flat_collection_size' => $this->flatCollection->count(),
-            'sort_field' => $this->config->sortField,
-            'sort_descending' => $this->config->sortDescending,
-        ]);
+        foreach ($this->sortedItems as $item) {
+            $id = $item->getId();
+
+            if (!isset($this->itemsById[$id])) {
+                $this->itemsById[$id] = $item;
+                $this->sortedIds[] = $id;
+                $this->availability[$id] = 0;
+            }
+
+            $this->availability[$id] += max(0, $item->getQuantity());
+        }
     }
 
     /**
-     * Duplicate an item in the collection based on its quantity field value.
+     * Find the maximum number of complete subsets via binary search.
+     *
+     * Feasibility is monotonic: if N subsets can be allocated, any smaller
+     * number can too. The upper bound treats each subset in isolation; the
+     * allocation check accounts for items shared between subsets.
      */
-    private function duplicateItemForQuantity(Subsetable $item): Collection
+    private function findMaxSubsetQuantity(): int
     {
-        $quantity = $item->getQuantity();
+        $low = 1;
+        $high = $this->upperBound();
+        $best = 0;
 
-        // Safety check for extremely large quantities
-        if ($quantity > 10000) { // 10k items max for testing
-            $this->logger->warning('Quantity too large, limiting to 10k items', [
-                'item_id' => $item->getId(),
-                'requested_quantity' => $quantity,
-                'limited_quantity' => 10000,
-            ]);
-            $quantity = 10000;
+        while ($low <= $high) {
+            $mid = intdiv($low + $high, 2);
+
+            if ($this->canAllocate($mid)) {
+                $best = $mid;
+                $low = $mid + 1;
+            } else {
+                $high = $mid - 1;
+            }
         }
 
-        if ($this->config->enableLazyEvaluation) {
-            return collect()->lazy()->times($quantity, fn() => clone $item)->collect();
-        }
-
-        return Collection::times($quantity, fn() => clone $item);
+        return $best;
     }
 
     /**
-     * Find all subsets based on the criteria.
+     * Upper bound for the subset quantity, ignoring overlap between subsets.
      */
-    private function findSubsets(): void
+    private function upperBound(): int
     {
-        $cartFlatten = collect();
+        $upper = PHP_INT_MAX;
 
         foreach ($this->subsetCollection as $subset) {
-            $filteredItems = $this->filterAndLimit(
-                $subset->items,
-                $subset->quantity * $this->subsetQuantity
-            );
+            $supply = 0;
+            foreach (array_keys(array_fill_keys($subset->items, true)) as $id) {
+                $supply += $this->availability[$id] ?? 0;
+            }
 
-            $cartFlatten->push($filteredItems);
+            $upper = min($upper, intdiv($supply, $subset->quantity));
         }
 
-        $this->foundSubsets = $cartFlatten
-            ->flatten(1)
-            ->groupBy($this->config->idField)
-            ->map(fn($itemGroup) => $this->mapItemGroup($itemGroup))
+        return $upper;
+    }
+
+    /**
+     * Try to allocate $quantity complete sets of every subset.
+     *
+     * Subsets draw from a shared pool in definition order; within a subset,
+     * items are consumed in sort order (e.g. cheapest first).
+     *
+     * @param array<int|string, int> $allocated Filled with quantity taken per id, in allocation order.
+     */
+    private function canAllocate(int $quantity, array &$allocated = []): bool
+    {
+        $available = $this->availability;
+        $allocated = [];
+
+        foreach ($this->subsetCollection as $subset) {
+            $wanted = array_fill_keys($subset->items, true);
+            $need = $subset->quantity * $quantity;
+
+            foreach ($this->sortedIds as $id) {
+                if ($need <= 0) {
+                    break;
+                }
+
+                if (!isset($wanted[$id]) || $available[$id] <= 0) {
+                    continue;
+                }
+
+                $take = min($available[$id], $need);
+                $available[$id] -= $take;
+                $need -= $take;
+                $allocated[$id] = ($allocated[$id] ?? 0) + $take;
+            }
+
+            if ($need > 0) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Build the found subsets as one item per id with the allocated quantity.
+     *
+     * @param array<int|string, int> $allocated
+     */
+    private function buildFoundSubsets(array $allocated): Collection
+    {
+        $found = collect();
+
+        foreach ($allocated as $id => $quantity) {
+            $item = clone $this->itemsById[$id];
+            $item->setQuantity($quantity);
+            $found->push($item);
+        }
+
+        return $found;
+    }
+
+    /**
+     * Calculate remaining quantities for items not consumed by subsets.
+     *
+     * @param array<int|string, int> $allocated
+     */
+    private function buildRemaining(array $allocated): Collection
+    {
+        return $this->collection
+            ->map(function(Subsetable $item) use (&$allocated) {
+                $clone = clone $item;
+                $taken = min($clone->getQuantity(), $allocated[$clone->getId()] ?? 0);
+
+                if ($taken > 0) {
+                    $allocated[$clone->getId()] -= $taken;
+                    $clone->setQuantity($clone->getQuantity() - $taken);
+                }
+
+                return $clone;
+            })
+            ->reject(fn(Subsetable $item) => $item->getQuantity() <= 0)
             ->values();
-
-        $this->logger->info('Subsets found', [
-            'found_subsets_count' => $this->foundSubsets->count(),
-            'total_items_found' => $this->foundSubsets->sum($this->config->quantityField),
-        ]);
     }
 
     /**
-     * Filter the collection based on the set criteria and limit the result.
-     */
-    private function filterAndLimit(array $filterIds, int $filterLimit): Collection
-    {
-        $filtered = $this->filteredFlatCollection
-            ->filter(fn(Subsetable $item) => in_array($item->getId(), $filterIds, true))
-            ->take($filterLimit);
-
-        // Remove the filtered items from the collection
-        $this->filteredFlatCollection->forget($filtered->keys()->toArray());
-
-        return $filtered;
-    }
-
-    /**
-     * Map the item group to set quantity and return the Subsetable.
-     */
-    private function mapItemGroup(Collection $itemGroup): Subsetable
-    {
-        $firstItem = clone $itemGroup->first();
-        $firstItem->setQuantity($itemGroup->count());
-
-        return $firstItem;
-    }
-
-    /**
-     * Calculate remaining quantities for items not included in subsets.
-     */
-    private function calculateRemaining(): void
-    {
-        $setItems = $this->foundSubsets->pluck($this->config->quantityField, $this->config->idField)->toArray();
-
-        $this->remainingSubsets = clone($this->collection)
-            ->map(fn($item) => $this->calculateRemainingQuantity(clone $item, $setItems))
-            ->reject(fn($item) => $item->getQuantity() <= 0)
-            ->values();
-
-        $this->logger->info('Remaining quantities calculated', [
-            'remaining_items_count' => $this->remainingSubsets->count(),
-            'total_remaining_quantity' => $this->remainingSubsets->sum($this->config->quantityField),
-        ]);
-    }
-
-    /**
-     * Calculate the remaining quantity for the given item after applying subsets.
-     */
-    private function calculateRemainingQuantity(Subsetable $item, array $setItems): Subsetable
-    {
-        $remainingQuantity = $item->getQuantity() - ($setItems[$item->getId()] ?? 0);
-        $item->setQuantity(max($remainingQuantity, 0));
-
-        return $item;
-    }
-
-    /**
-     * Log completion information.
-     */
-    private function logCompletion(): void
-    {
-        $executionTime = microtime(true) - $this->startTime;
-        $memoryPeak = memory_get_peak_usage(true);
-        $memoryIncrease = $memoryPeak - $this->startMemory;
-
-        $this->logger->info('Subset calculation completed', [
-            'execution_time_ms' => round($executionTime * 1000, 2),
-            'memory_peak_mb' => round($memoryPeak / 1024 / 1024, 2),
-            'memory_increase_mb' => round($memoryIncrease / 1024 / 1024, 2),
-            'subset_quantity' => $this->subsetQuantity,
-        ]);
-    }
-
-    /**
-     * Get a subset of the flattened collection.
+     * Get the first $count items in sort order, one entry per unit.
      */
     public function getSubsetItems(int $count): Collection
     {
@@ -309,7 +270,22 @@ class SubsetFinder
             throw new InvalidArgumentException('Count must be non-negative');
         }
 
-        return $this->flatCollection->take($count);
+        $result = collect();
+
+        foreach ($this->sortedItems as $item) {
+            if ($count <= 0) {
+                break;
+            }
+
+            $emit = min($item->getQuantity(), $count);
+            for ($i = 0; $i < $emit; $i++) {
+                $result->push(clone $item);
+            }
+
+            $count -= max(0, $emit);
+        }
+
+        return $result;
     }
 
     /**
@@ -337,18 +313,12 @@ class SubsetFinder
     }
 
     /**
-     * Get performance metrics.
+     * Get performance metrics for the last solve() call.
      */
     public function getPerformanceMetrics(): array
     {
-        $executionTime = microtime(true) - $this->startTime;
-        $memoryPeak = memory_get_peak_usage(true);
-        $memoryIncrease = $memoryPeak - $this->startMemory;
-
         return [
-            'execution_time_ms' => round($executionTime * 1000, 2),
-            'memory_peak_mb' => round($memoryPeak / 1024 / 1024, 2),
-            'memory_increase_mb' => round($memoryIncrease / 1024 / 1024, 2),
+            'execution_time_ms' => round($this->executionTime * 1000, 2),
             'collection_size' => $this->collection->count(),
             'subset_count' => $this->subsetCollection->count(),
             'found_subsets_count' => $this->foundSubsets->count(),
@@ -369,10 +339,10 @@ class SubsetFinder
      */
     public function getEfficiencyPercentage(): float
     {
-        $totalItems = $this->collection->sum($this->config->quantityField);
-        $usedItems = $this->foundSubsets->sum($this->config->quantityField);
+        $totalItems = $this->collection->sum(fn(Subsetable $item) => $item->getQuantity());
+        $usedItems = $this->foundSubsets->sum(fn(Subsetable $item) => $item->getQuantity());
 
-        if ($totalItems === 0) {
+        if ($totalItems <= 0) {
             return 0.0;
         }
 

@@ -2,16 +2,11 @@
 
 namespace Ozdemir\SubsetFinder\Tests;
 
-use Orchestra\Testbench\TestCase as Orchestra;
+use PHPUnit\Framework\TestCase as BaseTestCase;
 use Ozdemir\SubsetFinder\Subsetable;
 
-class TestCase extends Orchestra
+class TestCase extends BaseTestCase
 {
-    protected function setUp(): void
-    {
-        parent::setUp();
-    }
-
     protected function convertToArray($subsetables): array
     {
         return $subsetables->map(fn($subsetable) => $subsetable->toArray())->toArray();

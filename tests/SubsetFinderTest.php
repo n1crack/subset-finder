@@ -39,12 +39,7 @@ it('can find subsets in a collection', function() {
         Subset::of([3])->take(2),
     ]);
 
-    $config = new SubsetFinderConfig(
-        idField: 'id',
-        quantityField: 'quantity',
-        sortField: 'price',
-        sortDescending: false
-    );
+    $config = new SubsetFinderConfig(sortField: 'price');
 
     $subsetFinder = new SubsetFinder($collection, $setCollection, $config);
     $subsetFinder->solve();
@@ -68,7 +63,7 @@ it('can find subsets in a collection', function() {
         ]);
 });
 
-it('can find subsets in a collection with different field names', function() {
+it('can find subsets with custom field names via the Subsetable interface', function() {
     $collection = collect([
         $this->mockSubsetableAlt(1, 11, 15),
         $this->mockSubsetableAlt(2, 6, 5),
@@ -82,12 +77,7 @@ it('can find subsets in a collection with different field names', function() {
         Subset::of([3])->take(2),
     ]);
 
-    $config = new SubsetFinderConfig(
-        idField: 'name',
-        quantityField: 'amount',
-        sortField: 'price',
-        sortDescending: false
-    );
+    $config = new SubsetFinderConfig(sortField: 'price');
 
     $subsetter = new SubsetFinder($collection, $setCollection, $config);
     $subsetter->solve();
@@ -114,14 +104,7 @@ it('can return empty if there is no subset found', function() {
         Subset::of([3])->take(2),
     ]);
 
-    $config = new SubsetFinderConfig(
-        idField: 'id',
-        quantityField: 'quantity',
-        sortField: 'price',
-        sortDescending: false
-    );
-
-    $subsetFinder = new SubsetFinder($collection, $setCollection, $config);
+    $subsetFinder = new SubsetFinder($collection, $setCollection, new SubsetFinderConfig(sortField: 'price'));
 
     expect(fn() => $subsetFinder->solve())->toThrow(InsufficientQuantityException::class);
 });
@@ -143,14 +126,7 @@ it('can cover all items in the collection and remaining will be empty array ', f
         Subset::of([12])->take(5),
     ]);
 
-    $config = new SubsetFinderConfig(
-        idField: 'id',
-        quantityField: 'quantity',
-        sortField: 'price',
-        sortDescending: false
-    );
-
-    $subsetFinder = new SubsetFinder($collection, $setCollection, $config);
+    $subsetFinder = new SubsetFinder($collection, $setCollection, new SubsetFinderConfig(sortField: 'price'));
     $subsetFinder->solve();
 
     expect($subsetFinder->getSubsetQuantity())->toBe(1)
@@ -169,12 +145,7 @@ it('can have multiple items from the collection to look up', function() {
         Subset::of([1, 2])->take(6),
     ]);
 
-    $config = new SubsetFinderConfig(
-        idField: 'id',
-        quantityField: 'quantity',
-        sortField: 'price',
-        sortDescending: true
-    );
+    $config = new SubsetFinderConfig(sortField: 'price', sortDescending: true);
 
     $subsetFinder = new SubsetFinder($collection, $setCollection, $config);
     $subsetFinder->solve();
@@ -197,14 +168,7 @@ it('can have a single item in the setCollections ', function() {
         Subset::of([1, 2, 3, 5, 12])->take(5),
     ]);
 
-    $config = new SubsetFinderConfig(
-        idField: 'id',
-        quantityField: 'quantity',
-        sortField: 'price',
-        sortDescending: false
-    );
-
-    $subsetFinder = new SubsetFinder($collection, $setCollection, $config);
+    $subsetFinder = new SubsetFinder($collection, $setCollection, new SubsetFinderConfig(sortField: 'price'));
     $subsetFinder->solve();
 
     expect($subsetFinder->getSubsetQuantity())->toBe(8)
@@ -233,14 +197,7 @@ it('can get "n" many items by current order', function() {
         Subset::of([1, 2, 3, 5, 12])->take(5),
     ]);
 
-    $config = new SubsetFinderConfig(
-        idField: 'id',
-        quantityField: 'quantity',
-        sortField: 'price',
-        sortDescending: false
-    );
-
-    $subsetFinder = new SubsetFinder($collection, $setCollection, $config);
+    $subsetFinder = new SubsetFinder($collection, $setCollection, new SubsetFinderConfig(sortField: 'price'));
     $subsetFinder->solve();
 
     expect($this->convertToArray($subsetFinder->getSubsetItems(11)))->toBe([
@@ -273,14 +230,7 @@ it('can get the subsets with large number of sets', function() {
         Subset::of([5, 12])->take(5),
     ]);
 
-    $config = new SubsetFinderConfig(
-        idField: 'id',
-        quantityField: 'quantity',
-        sortField: 'price',
-        sortDescending: false
-    );
-
-    $subsetFinder = new SubsetFinder($collection, $setCollection, $config);
+    $subsetFinder = new SubsetFinder($collection, $setCollection, new SubsetFinderConfig(sortField: 'price'));
     $subsetFinder->solve();
 
     expect($subsetFinder->getSubsetQuantity())->toBe(900)
@@ -297,20 +247,55 @@ it('can get the subsets with large number of sets', function() {
         ]);
 });
 
-it('can use configuration profiles', function() {
+it('does not overcount when subsets share the same items', function() {
     $collection = collect([
-        $this->mockSubsetable(1, 100, 15),
-        $this->mockSubsetable(2, 50, 5),
+        $this->mockSubsetable(1, 10, 5),
+    ]);
+
+    // Each round needs 5 + 5 = 10 of item 1, so only one round fits in 10.
+    $setCollection = new SubsetCollection([
+        Subset::of([1])->take(5),
+        Subset::of([1])->take(5),
+    ]);
+
+    $subsetFinder = new SubsetFinder($collection, $setCollection);
+    $subsetFinder->solve();
+
+    expect($subsetFinder->getSubsetQuantity())->toBe(1)
+        ->and($subsetFinder->getFoundSubsets()->sum->getQuantity())->toBe(10)
+        ->and($this->convertToArray($subsetFinder->getRemaining()))->toBe([]);
+});
+
+it('treats numeric string ids and integer ids consistently', function() {
+    $collection = collect([
+        $this->mockSubsetable('1', 10, 5), // string id
     ]);
 
     $setCollection = new SubsetCollection([
-        Subset::of([1, 2])->take(10),
+        Subset::of([1])->take(5), // int id
     ]);
 
-    $subsetFinder = new SubsetFinder($collection, $setCollection, SubsetFinderConfig::forLargeDatasets());
+    $subsetFinder = new SubsetFinder($collection, $setCollection);
     $subsetFinder->solve();
 
-    expect($subsetFinder->getSubsetQuantity())->toBe(15);
+    expect($subsetFinder->getSubsetQuantity())->toBe(2)
+        ->and($subsetFinder->getFoundSubsets()->sum->getQuantity())->toBe(10);
+});
+
+it('can handle very large quantities without expanding items', function() {
+    $collection = collect([
+        $this->mockSubsetable(1, 10_000_000, 15),
+        $this->mockSubsetable(2, 5_000_000, 5),
+    ]);
+
+    $setCollection = new SubsetCollection([
+        Subset::of([1, 2])->take(3),
+    ]);
+
+    $subsetFinder = new SubsetFinder($collection, $setCollection);
+    $subsetFinder->solve();
+
+    expect($subsetFinder->getSubsetQuantity())->toBe(5_000_000);
 });
 
 it('can get performance metrics', function() {
@@ -330,13 +315,13 @@ it('can get performance metrics', function() {
 
     expect($metrics)->toHaveKeys([
         'execution_time_ms',
-        'memory_peak_mb',
-        'memory_increase_mb',
         'collection_size',
         'subset_count',
         'found_subsets_count',
         'remaining_items_count',
-    ]);
+    ])
+        ->and($metrics['collection_size'])->toBe(2)
+        ->and($metrics['subset_count'])->toBe(1);
 });
 
 it('can check if solution is optimal', function() {

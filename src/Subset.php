@@ -33,7 +33,7 @@ class Subset
      */
     public static function of(array $items): self
     {
-        return new static($items);
+        return new self($items);
     }
 
     /**
@@ -44,7 +44,7 @@ class Subset
      */
     public function take(int $quantity): self
     {
-        return new static($this->items, $quantity);
+        return new self($this->items, $quantity);
     }
 
     /**

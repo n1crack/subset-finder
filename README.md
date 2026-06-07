@@ -4,18 +4,17 @@
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/n1crack/subset-finder/run-tests.yml)](https://github.com/n1crack/subset-finder/actions)
 [![GitHub](https://github.com/n1crack/subset-finder/blob/main/LICENSE.md)](https://github.com/n1crack/subset-finder/blob/main/LICENSE.md)
 
-A powerful and flexible PHP package for efficiently finding subsets within collections based on quantity criteria. Built with Laravel collections and optimized for performance, memory efficiency, and developer experience.
+A PHP package for finding subsets within collections based on quantity criteria. Built on Laravel collections.
+
+Given a pool of items with quantities, it answers: *"How many complete sets can I build, which items go into them, and what is left over?"* — useful for bundle pricing, cart discounts ("buy 5 of X and 2 of Y"), and inventory allocation.
 
 ## Features
 
-- **High Performance**: Optimized algorithms with configurable memory limits
-- **Flexible Configuration**: Multiple configuration profiles for different use cases
-- **Performance Monitoring**: Built-in metrics and logging capabilities
-- **Robust Error Handling**: Comprehensive validation and meaningful error messages
-- **Type Safety**: Full PHP 8.1+ type support with strict validation
-- **Comprehensive Testing**: 100% test coverage with Pest PHP
-- **Laravel Integration**: Service provider, facade, and trait support
-- **Memory Efficient**: Optional lazy evaluation for large datasets
+- **Pure arithmetic solver**: quantities are never expanded into unit items, so memory stays flat and quantities in the billions solve in milliseconds
+- **Overlap aware**: subsets sharing the same item ids draw from a shared pool and are never double counted
+- **Flexible ordering**: allocate cheapest (or any sort order) items first
+- **Type safe**: PHP 8.1+, strict `Subsetable` interface
+- **Lightweight**: depends only on `illuminate/collections`
 
 ## Installation
 
@@ -23,17 +22,7 @@ A powerful and flexible PHP package for efficiently finding subsets within colle
 composer require ozdemir/subset-finder
 ```
 
-### Laravel Integration
-
-The package automatically registers with Laravel. If you need to publish the configuration:
-
-```bash
-php artisan vendor:publish --tag=subset-finder-config
-```
-
 ## Quick Start
-
-### Basic Usage
 
 ```php
 use Ozdemir\SubsetFinder\Subset;
@@ -49,68 +38,69 @@ $collection = collect([
 ]);
 
 $subsetCollection = new SubsetCollection([
-    Subset::of([1, 2])->take(5),  // Find 5 items from products 1 and 2
-    Subset::of([3])->take(2),      // Find 2 items from product 3
+    Subset::of([1, 2])->take(5), // Each set needs 5 items from products 1 and 2
+    Subset::of([3])->take(2),    // ...and 2 items from product 3
 ]);
 
-// Create and configure SubsetFinder
-$config = new SubsetFinderConfig(
-    idField: 'id',
-    quantityField: 'quantity',
-    sortField: 'price',        // Sort by price (ascending)
-    sortDescending: false
-);
+// Allocate the cheapest items first
+$config = new SubsetFinderConfig(sortField: 'price');
 
 $subsetFinder = new SubsetFinder($collection, $subsetCollection, $config);
 $subsetFinder->solve();
 
-// Get results
-$foundSubsets = $subsetFinder->getFoundSubsets();
-$remaining = $subsetFinder->getRemaining();
-$maxSubsets = $subsetFinder->getSubsetQuantity();
+$subsetFinder->getSubsetQuantity(); // Max number of complete sets
+$subsetFinder->getFoundSubsets();   // Items used per id (Collection<Subsetable>)
+$subsetFinder->getRemaining();      // Leftover quantities (Collection<Subsetable>)
 ```
 
-### Using Configuration Profiles
+### The Subsetable interface
+
+Collection items must implement `Subsetable`:
 
 ```php
-// For large datasets (512MB memory, lazy evaluation enabled)
-$subsetFinder = new SubsetFinder(
-    $collection, 
-    $subsetCollection, 
-    SubsetFinderConfig::forLargeDatasets()
-);
+use Ozdemir\SubsetFinder\Subsetable;
 
-// For performance (64MB memory, lazy evaluation disabled)
-$subsetFinder = new SubsetFinder(
-    $collection, 
-    $subsetCollection, 
-    SubsetFinderConfig::forPerformance()
-);
+class Product implements Subsetable
+{
+    public function __construct(
+        public int|string $id,
+        public int $quantity,
+        public float $price,
+    ) {
+    }
 
-// For balanced approach (256MB memory, lazy evaluation enabled)
-$subsetFinder = new SubsetFinder(
-    $collection, 
-    $subsetCollection, 
-    SubsetFinderConfig::forBalanced()
-);
+    public function getId(): int|string
+    {
+        return $this->id;
+    }
+
+    public function getQuantity(): int
+    {
+        return $this->quantity;
+    }
+
+    public function setQuantity(int $quantity): void
+    {
+        $this->quantity = $quantity;
+    }
+}
 ```
 
-### Using the Facade
+Item ids and quantities are read through the interface, so your property names don't matter. Only `sortField` in the config refers to a property of your objects.
+
+### Configuration
 
 ```php
-use Ozdemir\SubsetFinder\Facades\SubsetFinder;
-
-// Create with default configuration
-$subsetFinder = SubsetFinder::create($collection, $subsetCollection);
-
-// Create with specific profile
-$subsetFinder = SubsetFinder::forLargeDatasets($collection, $subsetCollection);
-$subsetFinder = SubsetFinder::forPerformance($collection, $subsetCollection);
+$config = new SubsetFinderConfig(
+    sortField: 'price',    // Property used to order allocation (default: 'id')
+    sortDescending: false  // Ascending = cheapest first (default)
+);
 ```
 
 ### Using the Trait
 
 ```php
+use Illuminate\Support\Collection;
 use Ozdemir\SubsetFinder\Traits\HasSubsetOperations;
 
 class ProductCollection extends Collection
@@ -118,140 +108,43 @@ class ProductCollection extends Collection
     use HasSubsetOperations;
 }
 
-$products = new ProductCollection([...]);
+$products = new ProductCollection([/* Subsetable items */]);
 
-// Find subsets directly on the collection
 $subsetFinder = $products->findSubsets($subsetCollection);
-
-// Use profiles
-$subsetFinder = $products->findSubsetsWithProfile($subsetCollection, 'large_datasets');
-
-// Check feasibility
-if ($products->canSatisfySubsets($subsetCollection)) {
-    // Proceed with subset creation
-}
+$products->canSatisfySubsets($subsetCollection);   // bool
+$products->getMaxSubsetQuantity($subsetCollection); // int
 ```
 
-## Use Cases
-
-### E-commerce Bundle Creation
-```php
-$products = collect([
-    new Product(id: 1, quantity: 100, price: 10),  // T-shirt
-    new Product(id: 2, quantity: 50, price: 5),    // Socks
-    new Product(id: 3, quantity: 25, price: 20),   // Hat
-]);
-
-$bundles = new SubsetCollection([
-    Subset::of([1, 2])->take(2),  // T-shirt + Socks bundle
-    Subset::of([1, 3])->take(1),  // T-shirt + Hat bundle
-]);
-
-$subsetFinder = new SubsetFinder($products, $bundles);
-$subsetFinder->solve();
-
-// Create 25 T-shirt + Socks bundles
-// Create 25 T-shirt + Hat bundles
-// Remaining: 25 T-shirts, 0 socks, 0 hats
-```
-
-### Inventory Management
-```php
-$inventory = collect([
-    new Item(id: 'A', quantity: 100, category: 'electronics'),
-    new Item(id: 'B', quantity: 200, category: 'clothing'),
-    new Item(id: 'C', quantity: 150, category: 'books'),
-]);
-
-$orders = new SubsetCollection([
-    Subset::of(['A', 'B'])->take(10),  // Electronics + Clothing order
-    Subset::of(['C'])->take(5),        // Books order
-]);
-
-$subsetFinder = new SubsetFinder($inventory, $orders);
-$subsetFinder->solve();
-```
-
-## Configuration
-
-### Environment Variables
-
-```env
-SUBSET_FINDER_MAX_MEMORY=256M
-SUBSET_FINDER_LAZY_EVALUATION=true
-SUBSET_FINDER_LOGGING=true
-SUBSET_FINDER_LOG_CHANNEL=subset-finder
-SUBSET_FINDER_LOG_LEVEL=info
-```
-
-### Configuration File
+### Other methods
 
 ```php
-// config/subset-finder.php
-return [
-    'defaults' => [
-        'id_field' => 'id',
-        'quantity_field' => 'quantity',
-        'sort_field' => 'id',
-        'sort_descending' => false,
-        'max_memory_usage' => env('SUBSET_FINDER_MAX_MEMORY', 128 * 1024 * 1024),
-        'enable_lazy_evaluation' => env('SUBSET_FINDER_LAZY_EVALUATION', true),
-        'enable_logging' => env('SUBSET_FINDER_LOGGING', false),
-    ],
-    
-    'profiles' => [
-        'large_datasets' => [
-            'max_memory_usage' => 512 * 1024 * 1024,
-            'enable_lazy_evaluation' => true,
-            'enable_logging' => true,
-        ],
-        'performance' => [
-            'max_memory_usage' => 64 * 1024 * 1024,
-            'enable_lazy_evaluation' => false,
-            'enable_logging' => false,
-        ],
-    ],
-];
+$subsetFinder->getSubsetItems(10);          // First 10 units in sort order
+$subsetFinder->isOptimal();                 // true if nothing is left over
+$subsetFinder->getEfficiencyPercentage();   // Used / total quantity
+$subsetFinder->getPerformanceMetrics();     // Timing and counts of the last solve()
 ```
 
-## Performance Monitoring
+## How it works
 
-```php
-$subsetFinder = new SubsetFinder($collection, $subsetCollection);
-$subsetFinder->solve();
+1. Quantities are aggregated per item id; items are sorted by `sortField`.
+2. The maximum number of complete sets is found by binary search. For each candidate, subsets claim quantities from the shared pool in definition order, consuming items in sort order.
+3. The winning allocation becomes `getFoundSubsets()`; whatever is left becomes `getRemaining()`.
 
-// Get performance metrics
-$metrics = $subsetFinder->getPerformanceMetrics();
-// [
-//     'execution_time_ms' => 45.23,
-//     'memory_peak_mb' => 12.5,
-//     'memory_increase_mb' => 8.2,
-//     'collection_size' => 1000,
-//     'subset_count' => 5,
-//     'found_subsets_count' => 5,
-//     'remaining_items_count' => 50
-// ]
-
-// Check solution quality
-$isOptimal = $subsetFinder->isOptimal();           // true if no remaining items
-$efficiency = $subsetFinder->getEfficiencyPercentage(); // 95.2%
-```
+The solver never materializes individual units, so runtime and memory depend on the number of *distinct items*, not their quantities.
 
 ## Error Handling
 
 ```php
-use Ozdemir\SubsetFinder\Exceptions\InvalidArgumentException;
 use Ozdemir\SubsetFinder\Exceptions\InsufficientQuantityException;
+use Ozdemir\SubsetFinder\Exceptions\InvalidArgumentException;
 
 try {
     $subsetFinder = new SubsetFinder($collection, $subsetCollection);
     $subsetFinder->solve();
 } catch (InvalidArgumentException $e) {
-    // Handle invalid input (empty collection, invalid items, etc.)
-    Log::error('Invalid subset finder input: ' . $e->getMessage());
+    // Empty collection, or items not implementing Subsetable
 } catch (InsufficientQuantityException $e) {
-    // Handle insufficient quantities
-    Log::warning('Cannot create subsets: ' . $e->getMessage());
+    // Not even one complete set can be built
 }
 ```
 
@@ -268,90 +161,10 @@ composer test-coverage
 composer analyse
 ```
 
-## Performance Tips
-
-1. **Use appropriate configuration profiles** for your dataset size
-2. **Enable lazy evaluation** for large collections to reduce memory usage
-3. **Monitor memory usage** and adjust `max_memory_usage` accordingly
-4. **Use meaningful sort fields** to optimize subset selection
-5. **Consider batch processing** for very large datasets
-
-## Advanced Usage
-
-### Custom Logging
-
-```php
-use Psr\Log\LoggerInterface;
-
-class CustomLogger implements LoggerInterface
-{
-    // Implement logger methods
-}
-
-$subsetFinder = new SubsetFinder(
-    $collection, 
-    $subsetCollection, 
-    $config, 
-    new CustomLogger()
-);
-```
-
-### Memory Management
-
-```php
-// Check memory before processing
-if (memory_get_usage(true) > $config->maxMemoryUsage) {
-    throw new \Exception('Insufficient memory for processing');
-}
-
-// Process in batches for very large datasets
-$batchSize = 1000;
-foreach ($collection->chunk($batchSize) as $batch) {
-    // Process batch
-}
-```
-
 ## Contributing
 
-Contributions are welcome! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This package is open-sourced software licensed under the [MIT License](LICENSE.md).
-
-## Support
-
-- **Documentation**: [GitHub Wiki](https://github.com/n1crack/subset-finder/wiki)
-- **Issues**: [GitHub Issues](https://github.com/n1crack/subset-finder/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/n1crack/subset-finder/discussions)
-
-## Roadmap
-
-### ✅ **Redis Caching Support**
-- **High-performance caching** with Redis integration
-- **Memory-based fallback** when Redis is unavailable
-- **Smart cache key generation** based on input data
-- **Configurable TTL** and cache management
-- **Automatic fallback** to memory cache on Redis failure
-
-### ✅ **Parallel Processing**
-- **Multi-process subset finding** for large datasets
-- **Intelligent chunking** with optimal size calculation
-- **System-aware process limits** based on CPU and memory
-- **Simulated parallel processing** for development environments
-- **Performance metrics** for parallel operations
-
-### ✅ **Weighted Subset Selection**
-- **Multi-criteria optimization** with configurable weights
-- **Advanced constraint handling** (ranges, custom functions)
-- **Efficiency scoring** and ranking algorithms
-- **Statistical analysis** with quartiles and distributions
-- **Real-world optimization** scenarios (e-commerce, inventory)
-
-### 🔄 **In Development**
-- [ ] Machine learning-based optimization
-- [ ] GraphQL integration
-- [ ] Performance benchmarking tools
-- [ ] More configuration profiles
-
-
+The MIT License (MIT). Please see [License File](LICENSE.md) for more information.

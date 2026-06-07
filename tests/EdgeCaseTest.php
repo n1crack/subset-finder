@@ -2,6 +2,7 @@
 
 namespace Ozdemir\SubsetFinder\Tests;
 
+use Ozdemir\SubsetFinder\Exceptions\InsufficientQuantityException;
 use Ozdemir\SubsetFinder\Exceptions\InvalidArgumentException;
 use Ozdemir\SubsetFinder\Subset;
 use Ozdemir\SubsetFinder\SubsetCollection;
@@ -11,7 +12,8 @@ use Ozdemir\SubsetFinder\SubsetFinderConfig;
 class EdgeCaseTest extends TestCase
 {
     /**
-     * Test with extremely large quantities
+     * Test with extremely large quantities; quantities are never expanded,
+     * so this must be exact and fast.
      */
     public function test_with_extremely_large_quantities(): void
     {
@@ -25,10 +27,9 @@ class EdgeCaseTest extends TestCase
         ]);
 
         $subsetFinder = new SubsetFinder($collection, $subsetCollection);
-
-        // Should not cause memory issues or crashes
-        $this->expectNotToPerformAssertions();
         $subsetFinder->solve();
+
+        $this->assertEquals(20, $subsetFinder->getSubsetQuantity());
     }
 
     /**
@@ -51,20 +52,6 @@ class EdgeCaseTest extends TestCase
         // because (0 + 10) / 5 = 2
         $subsetFinder->solve();
         $this->assertEquals(2, $subsetFinder->getSubsetQuantity());
-    }
-
-    /**
-     * Test with negative quantities (should be prevented by interface)
-     */
-    public function test_with_negative_quantities(): void
-    {
-        // This test ensures the interface prevents negative quantities
-        // Since the interface enforces int type, we can't test negative values directly
-        // Instead, we'll test that the interface properly enforces positive integers
-        $this->expectNotToPerformAssertions();
-
-        // The interface should prevent negative quantities at the type level
-        // This is enforced by PHP's type system, not our code
     }
 
     /**
@@ -105,7 +92,8 @@ class EdgeCaseTest extends TestCase
     }
 
     /**
-     * Test with overlapping item IDs
+     * Test with overlapping item IDs: subsets drawing from the same pool
+     * must not double count availability.
      */
     public function test_with_overlapping_item_ids(): void
     {
@@ -123,8 +111,13 @@ class EdgeCaseTest extends TestCase
         $subsetFinder = new SubsetFinder($collection, $subsetCollection);
         $subsetFinder->solve();
 
-        // Should handle overlapping items correctly
-        $this->assertGreaterThan(0, $subsetFinder->getSubsetQuantity());
+        // Each round consumes 10 + 20 + 15 = 45 items from a pool of 150,
+        // but item 1 alone caps rounds at 3 (3 * (10 + 20) = 90 <= 100).
+        $this->assertEquals(3, $subsetFinder->getSubsetQuantity());
+
+        // 4 rounds would need 4 * 45 = 180 > 150 items in total.
+        $allocated = $subsetFinder->getFoundSubsets()->sum(fn($item) => $item->getQuantity());
+        $this->assertEquals(3 * 45, $allocated);
     }
 
     /**
@@ -150,47 +143,6 @@ class EdgeCaseTest extends TestCase
     }
 
     /**
-     * Test with maximum memory configuration
-     */
-    public function test_with_maximum_memory_configuration(): void
-    {
-        $collection = $this->createLargeCollection(1000);
-        $subsetCollection = $this->createLargeSubsetCollection(50);
-
-        // Test with very low memory limit
-        $lowMemoryConfig = new SubsetFinderConfig(maxMemoryUsage: 1024); // 1KB
-
-        $this->expectException(InvalidArgumentException::class);
-        new SubsetFinder($collection, $subsetCollection, $lowMemoryConfig);
-    }
-
-    /**
-     * Test with invalid field names
-     */
-    public function test_with_invalid_field_names(): void
-    {
-        $collection = collect([
-            $this->mockSubsetable(1, 10, 100),
-        ]);
-
-        $subsetCollection = new SubsetCollection([
-            Subset::of([1])->take(5),
-        ]);
-
-        // Test with non-existent field names
-        $config = new SubsetFinderConfig(
-            idField: 'non_existent_id',
-            quantityField: 'non_existent_quantity'
-        );
-
-        $subsetFinder = new SubsetFinder($collection, $subsetCollection, $config);
-
-        // Should throw exception for invalid field names
-        $this->expectException(\Ozdemir\SubsetFinder\Exceptions\InsufficientQuantityException::class);
-        $subsetFinder->solve();
-    }
-
-    /**
      * Test with mixed data types in collections
      */
     public function test_with_mixed_data_types(): void
@@ -207,26 +159,6 @@ class EdgeCaseTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
         new SubsetFinder($collection, $subsetCollection);
-    }
-
-    /**
-     * Test with circular references
-     */
-    public function test_with_circular_references(): void
-    {
-        $collection = collect([
-            $this->mockSubsetable(1, 10, 100),
-        ]);
-
-        $subsetCollection = new SubsetCollection([
-            Subset::of([1])->take(5),
-        ]);
-
-        $subsetFinder = new SubsetFinder($collection, $subsetCollection);
-        $subsetFinder->solve();
-
-        // Should not cause infinite loops
-        $this->assertGreaterThanOrEqual(0, $subsetFinder->getSubsetQuantity());
     }
 
     /**
@@ -249,18 +181,18 @@ class EdgeCaseTest extends TestCase
         $subsetFinder = new SubsetFinder($collection, $subsetCollection, $ascConfig);
         $subsetFinder->solve();
 
-        $this->assertGreaterThan(0, $subsetFinder->getSubsetQuantity());
+        $this->assertEquals(9, $subsetFinder->getSubsetQuantity());
 
         // Test descending sort
         $descConfig = new SubsetFinderConfig(sortField: 'price', sortDescending: true);
         $subsetFinder = new SubsetFinder($collection, $subsetCollection, $descConfig);
         $subsetFinder->solve();
 
-        $this->assertGreaterThan(0, $subsetFinder->getSubsetQuantity());
+        $this->assertEquals(9, $subsetFinder->getSubsetQuantity());
     }
 
     /**
-     * Test with empty collections after filtering
+     * Test with subsets referencing ids that do not exist in the collection
      */
     public function test_with_empty_collections_after_filtering(): void
     {
@@ -275,7 +207,7 @@ class EdgeCaseTest extends TestCase
         $subsetFinder = new SubsetFinder($collection, $subsetCollection);
 
         // Should throw exception for insufficient quantities
-        $this->expectException(\Ozdemir\SubsetFinder\Exceptions\InsufficientQuantityException::class);
+        $this->expectException(InsufficientQuantityException::class);
         $subsetFinder->solve();
     }
 
@@ -289,37 +221,14 @@ class EdgeCaseTest extends TestCase
 
         $subsetFinder = new SubsetFinder($collection, $subsetCollection);
 
-        // Should not crash with many subsets
-        $this->expectNotToPerformAssertions();
-        $subsetFinder->solve();
-    }
-
-    /**
-     * Test with floating point quantities
-     */
-    public function test_with_floating_point_quantities(): void
-    {
-        // This test ensures the interface properly handles integer quantities
-        // Since the interface enforces int type, we can't test float values directly
-        // Instead, we'll test that the interface properly enforces integers
-        $this->expectNotToPerformAssertions();
-
-        // The interface should prevent float quantities at the type level
-        // This is enforced by PHP's type system, not our code
-    }
-
-    /**
-     * Test with null values
-     */
-    public function test_with_null_values(): void
-    {
-        // This test ensures the interface properly handles null quantities
-        // Since the interface enforces int type, we can't test null values directly
-        // Instead, we'll test that the interface properly enforces non-null integers
-        $this->expectNotToPerformAssertions();
-
-        // The interface should prevent null quantities at the type level
-        // This is enforced by PHP's type system, not our code
+        // Should not crash with many subsets; result is either a valid
+        // quantity or a clean insufficient-quantity exception.
+        try {
+            $subsetFinder->solve();
+            $this->assertGreaterThan(0, $subsetFinder->getSubsetQuantity());
+        } catch (InsufficientQuantityException $e) {
+            $this->assertEquals(0, $subsetFinder->getSubsetQuantity());
+        }
     }
 
     /**
