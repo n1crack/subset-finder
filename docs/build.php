@@ -179,45 +179,46 @@ foreach ($finder->getRemaining() as $part) {
 PHP,
     ],
     [
-        'id' => 'staffing',
-        'title' => '👥 Shift staffing',
-        'question' => 'How many fully staffed shifts can we run this week with the hours people have available?',
-        'desc' => 'Quantities don\'t have to be things on a shelf. Here each person\'s quantity is '
-            . 'the number of shifts they can take this week; every shift needs 2 senior slots and '
-            . '4 support slots. Sorting by cost fills shifts with the cheapest available people first.',
+        'id' => 'capacity',
+        'title' => '🎓 Selling coaching packages against available hours',
+        'question' => 'How many coaching packages can we sell this month with the hours our tutors have left?',
+        'desc' => 'Quantities don\'t have to be things on a shelf — here they are <em>hours</em>, '
+            . 'which split freely across packages. One package includes 10 senior hours and 20 '
+            . 'junior hours, from any mix of tutors; sorting by hourly rate books the cheapest '
+            . 'qualified hours first.',
         'code' => <<<'PHP'
 use Ozdemir\SubsetFinder\Subset;
 use Ozdemir\SubsetFinder\SubsetCollection;
 use Ozdemir\SubsetFinder\SubsetFinder;
 use Ozdemir\SubsetFinder\SubsetFinderConfig;
 
-// quantity = shifts this person can take this week, price = cost per shift
-$team = [
-    new Item(1, 'Maya (senior)', quantity: 5,  price: 320.0),
-    new Item(2, 'Tom (senior)',  quantity: 4,  price: 340.0),
-    new Item(3, 'Alex (mid)',    quantity: 6,  price: 240.0),
-    new Item(4, 'Sam (mid)',     quantity: 6,  price: 230.0),
-    new Item(5, 'Kim (junior)',  quantity: 10, price: 180.0),
+// quantity = hours available this month, price = hourly rate
+$tutors = [
+    new Item(1, 'Maya (senior)', quantity: 40, price: 80.0),
+    new Item(2, 'Tom (senior)',  quantity: 25, price: 90.0),
+    new Item(3, 'Alex (junior)', quantity: 60, price: 45.0),
+    new Item(4, 'Sam (junior)',  quantity: 50, price: 40.0),
 ];
 
-$shift = new SubsetCollection([
-    Subset::of([1, 2])->take(2),    // 2 senior slots per shift
-    Subset::of([3, 4, 5])->take(4), // 4 support slots per shift
+// One package = 10 senior hours + 20 junior hours, any mix of tutors
+$package = new SubsetCollection([
+    Subset::of([1, 2])->take(10),
+    Subset::of([3, 4])->take(20),
 ]);
 
-$finder = new SubsetFinder($team, $shift, new SubsetFinderConfig(sortField: 'price'));
+$finder = new SubsetFinder($tutors, $package, new SubsetFinderConfig(sortField: 'price'));
 $finder->solve();
 
-printf("Fully staffed shifts this week: %d\n\n", $finder->getSubsetQuantity());
+printf("Packages we can sell this month: %d\n\n", $finder->getSubsetQuantity());
 
-echo "Roster (cheapest first):\n";
-foreach ($finder->getFoundSubsets() as $person) {
-    printf("  %-13s %2d shifts\n", $person->name, $person->quantity);
+echo "Hours booked (cheapest rate first):\n";
+foreach ($finder->getFoundSubsets() as $tutor) {
+    printf("  %-13s %3d hours\n", $tutor->name, $tutor->quantity);
 }
 
-echo "\nSpare capacity:\n";
-foreach ($finder->getRemaining() as $person) {
-    printf("  %-13s %2d shifts free\n", $person->name, $person->quantity);
+echo "\nHours still free:\n";
+foreach ($finder->getRemaining() as $tutor) {
+    printf("  %-13s %3d hours\n", $tutor->name, $tutor->quantity);
 }
 PHP,
     ],

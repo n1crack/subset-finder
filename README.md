@@ -129,6 +129,10 @@ $subsetFinder->getEfficiencyPercentage();   // Used / total quantity
 $subsetFinder->getPerformanceMetrics();     // Timing and counts of the last solve()
 ```
 
+## When it fits
+
+The solver models **fungible quantity pools**: units of the same id are interchangeable, and an item's quantity can split freely across sets (goods, portions, hours, credits). It does not model per-set distinctness — if each set needs N *different* individuals (e.g. two distinct people per shift), that's an assignment problem, not a quantity pool.
+
 ## How it works
 
 1. Quantities are aggregated per item id; items are sorted by `sortField`.
