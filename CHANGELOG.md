@@ -2,7 +2,7 @@
 
 All notable changes to `subset-finder` will be documented in this file.
 
-## v3.0.0 - Unreleased
+## v3.0.0 - 2026-06-07
 
 ### Fixed
 
