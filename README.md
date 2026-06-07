@@ -15,7 +15,7 @@ Given a pool of items with quantities, it answers: *"How many complete sets can 
 - **Pure arithmetic solver**: quantities are never expanded into unit items, so memory stays flat and quantities in the billions solve in milliseconds
 - **Overlap aware**: subsets sharing the same item ids draw from a shared pool and are never double counted
 - **Flexible ordering**: allocate cheapest (or any sort order) items first
-- **Type safe**: PHP 8.1+, strict `Subsetable` interface
+- **Type safe**: PHP 8.2+, strict `Subsetable` interface
 - **Zero dependencies**: plain PHP; accepts arrays or any iterable (including Laravel collections)
 
 ## Installation
