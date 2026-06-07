@@ -2,8 +2,8 @@
 
 namespace Ozdemir\SubsetFinder\Tests;
 
-use PHPUnit\Framework\TestCase as BaseTestCase;
 use Ozdemir\SubsetFinder\Subsetable;
+use PHPUnit\Framework\TestCase as BaseTestCase;
 
 class TestCase extends BaseTestCase
 {
